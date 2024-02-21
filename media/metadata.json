@@ -1,0 +1,26 @@
+{
+    "Harry Potter e a Pedra Filosofal.pdf": {
+        "start_page": 2,
+        "Author": "J.K. Rowling",
+        "year": "2000",
+        "table_of_contents": {
+            "2": "Capítulo Um: O menino que sobreviveu",
+            "16": "Capítulo Dois: O vidro que sumiu",
+            "27": "Capítulo Tres: As cartas de ninguém",
+            "40": "Capítulo Quatro: O Guardião das chaves",
+            "53": "Capítulo Cinco: O beco diagonal",
+            "77": "Capítulo Seis: O embarque na plataforma nove e meia",
+            "98": "Capítulo Sete: O chapéu seletor",
+            "113": "Capítulo Oito: O mestre das poções",
+            "123": "Capítulo Nove: O duelo a meia-noite",
+            "140": "Capítulo Dez: O Dia das Bruxas",
+            "154": "Capítulo Onze: Quadribol",
+            "165": "Capítulo Doze: O Espelho de Ojesed",
+            "183": "Capítulo Treze: Nicolau Flamel",
+            "194": "Capítulo Catorze: Norberto, o dragão norueguês",
+            "206": "Capítulo Quinze: A floresta proibida",
+            "222": "Capítulo Dezesseis: No Alçapão",
+            "244": "Capítulo Dezessete: O homem de duas caras",
+        }
+    }
+}

@@ -1,0 +1,5 @@
+pdfplumber
+nltk
+spacy
+googletrans
+
