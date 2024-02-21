@@ -1,6 +1,7 @@
 {
     "Harry Potter e a Pedra Filosofal.pdf": {
         "start_page": 2,
+        "end_page": 17,
         "Author": "J.K. Rowling",
         "year": "2000",
         "table_of_contents": {
@@ -20,7 +21,7 @@
             "194": "Capítulo Catorze: Norberto, o dragão norueguês",
             "206": "Capítulo Quinze: A floresta proibida",
             "222": "Capítulo Dezesseis: No Alçapão",
-            "244": "Capítulo Dezessete: O homem de duas caras",
+            "244": "Capítulo Dezessete: O homem de duas caras"
         }
     }
 }
