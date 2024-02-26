@@ -8,7 +8,10 @@ class Google:
         Default translator function, using googletrans (a free python wrapper for Google Translate).
         This can be swapped out for a different translator if desired.
         '''
-        translationResult = self.translator.translate(text, src='pt', dest='en')
+        if type(text) == str:
+            translationResult = self.translator.translate(text, src='pt', dest='en')
+        else:
+            translationResult = [self.translator.translate(t, src='pt', dest='en') for t in text]
 
         return translationResult.text
 
@@ -22,4 +25,7 @@ class HuggingFace:
         self.pten_pipeline = pipeline('text2text-generation', model=model, tokenizer=tokenizer)
 
     def translate(self, text):
-        return self.pten_pipeline(text)
+        if type(text) == str:
+            return self.pten_pipeline(text)['generated_text']
+        elif type(text) == list:
+            return [item['generated_text'] for item in self.pten_pipeline(text)]
