@@ -37,24 +37,38 @@ def prepChunk(items, chunkString=''):
     print(f"Getting translations for chunk: {chunkString}")
 
     # Combine into new data
+    # result = []
+    # for item in tqdm(items):
+    #     try:
+    #         out = item.copy()
+    #         translation = Translator.translate(item['text'])
+    #         lemma = lemmatize(item['text'])
+    #         out['trans'] = translation
+    #         out['lemmas'] = lemma
+    #         result.append(out)
+    #     except Exception as e:
+    #         print(f"Error processing item: {e}")
+    #         # Print full exception for debugging
+    #         import traceback
+    #         print(traceback.format_exc())
+    #         print(f"Skipping item")
+
+    try:
+        lemmas = [lemmatize(item) for item in sents]
+        translations = Translator.translate(sents)
+    except Exception as e:
+        print(f"Error processing chunk: {e}")
+        # Print full exception for debugging
+        import traceback
+        print(traceback.format_exc())
+        print(f"Skipping chunk")
+
     result = []
-    # for item, translation, lemma in zip(items, translations, lemmas):
-    for item in tqdm(items):
-        try:
-            out = item.copy()
-            translation = Translator.translate(item['text'])
-            lemma = lemmatize(item['text'])
-            out['trans'] = translation
-            out['lemmas'] = lemma
-            result.append(out)
-        except Exception as e:
-            print(f"Error processing item: {e}")
-            # Print full exception for debugging
-            import traceback
-            print(traceback.format_exc())
-
-            print(f"Skipping item")
-
+    for item, translation, lemma in zip(items, translations, lemmas):
+        out = item.copy()
+        out['trans'] = translation
+        out['lemmas'] = lemma
+        result.append(out)
     
     return result
 
