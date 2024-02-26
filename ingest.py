@@ -78,7 +78,7 @@ def ingestAll(items, sourceType, sourcePath, chunkSize=10, chunkDelay=0):
     totalChunks = math.ceil(len(items) / chunkSize)
     for i in range(0, len(items), chunkSize):
         chunk = items[i:i+chunkSize]
-        chunkIndex = i // chunkSize
+        chunkIndex = 1 + (i // chunkSize)
         try:
             preppedChunk = prepChunk(chunk, chunkString=f"{chunkIndex} / {totalChunks}")
             for item in preppedChunk:
