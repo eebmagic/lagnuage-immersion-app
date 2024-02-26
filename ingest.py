@@ -4,11 +4,11 @@ import re
 import json
 from tqdm import tqdm
 
-from googletrans import Translator
 import spacy
-
-translator = Translator()
 nlp = spacy.load('pt_core_news_sm')
+
+from translators import HuggingFace as T
+Translator = T()
 
 
 def lemmatize(text):
@@ -29,30 +29,12 @@ def lemmatize(text):
     return lemmas
 
 
-def translate(text, src='pt', dest='en'):
-    '''
-    Default translator function, using googletrans (a free python wrapper for Google Translate).
-    This can be swapped out for a different translator if desired.
-    '''
-    translationResult = translator.translate(text, src=src, dest=dest)
-
-    return translationResult.text
-
-
 def prepChunk(items, chunkString=''):
     # Pull text from items
     sents = [item['text'] for item in items]
 
     # Generate new data
-    print(f"Getting translations: {chunkString}")
-    # translations = [translate(sent, src='pt', dest='en') for sent in sents]
-    # translations = [translate(sent, src='pt', dest='en') for sent in tqdm(sents)]
-    # translations = []
-    # for sent in tqdm(sents):
-    #     translations.append(translate(sent, src='pt', dest='en'))
-
-
-    # lemmas = [lemmatize(sent) for sent in sents]
+    print(f"Getting translations for chunk: {chunkString}")
 
     # Combine into new data
     result = []
@@ -60,13 +42,17 @@ def prepChunk(items, chunkString=''):
     for item in tqdm(items):
         try:
             out = item.copy()
-            translation = translate(item['text'], src='pt', dest='en')
+            translation = Translator.translate(item['text'])
             lemma = lemmatize(item['text'])
             out['trans'] = translation
             out['lemmas'] = lemma
             result.append(out)
         except Exception as e:
             print(f"Error processing item: {e}")
+            # Print full exception for debugging
+            import traceback
+            print(traceback.format_exc())
+
             print(f"Skipping item")
 
     
@@ -118,6 +104,6 @@ def ingestNew(items, sourceType, sourcePath, entriesSource='./entries.json', chu
 
     # Update in file
     existingEntries.update(processedResult)
-    with open('entries.json', 'w') as file:
+    with open(entriesSource, 'w') as file:
         json.dump(existingEntries, file)
         print(f"Updated entries file with {len(existingEntries)} total entries ({len(processedResult)} are new)")
