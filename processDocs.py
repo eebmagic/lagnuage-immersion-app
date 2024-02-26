@@ -63,10 +63,6 @@ if __name__ == '__main__':
     pdfs = [f for f in os.listdir(SOURCE_PATH) if f.endswith('.pdf')]
     print(pdfs)
 
-    # Load existing entries
-    with open('entries.json') as file:
-        ENTRIES = json.load(file)
-        print(f"Got entries: {ENTRIES}")
 
     with open('media/metadata.json') as file:
         METADATA = json.load(file)
@@ -82,20 +78,16 @@ if __name__ == '__main__':
         doc_meta = METADATA[pdf]
         text_lines, page_nums = pdf_to_text(pdfPath, doc_meta)
         
-        print(text_lines[:5])
-        print(page_nums[:5])
-
 
         # Split the lines into sentences and page nums
         sents = split_sentences(text_lines, page_nums)
 
-        print('\nGOT THESE SENTENCES FROM PAGE 45:')
-        for sent in sents[-100:]:
-            print(f"\t{sent['id']}")
-            print(f"\t{sent['page']}.{sent['sentence_index']}")
-            print(f"\t{sent['text']}")
-            print()
-        print(f"Found {len(sents)} sentences in doc")
+        # for sent in sents:
+        #     print(f"\t{sent['id']}")
+        #     print(f"\t{sent['page']}.{sent['page_sentence_index']}")
+        #     print(f"\t{sent['text']}")
+        #     print()
+        print(f"\nFound {len(sents)} sentences in doc\n")
         
 
         # # Check db for existing before processing
