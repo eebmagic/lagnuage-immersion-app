@@ -2,6 +2,7 @@ import os
 import json
 import pdfplumber
 from tqdm import tqdm
+import argparse
 
 import spacy
 nlp = spacy.load('pt_core_news_sm')
@@ -9,6 +10,11 @@ nlp = spacy.load('pt_core_news_sm')
 from clean import process_lines, split_sentences
 # from ingest import ingestAll
 
+parser = argparse.ArgumentParser(description='Process a directory of pdfs')
+parser.add_argument('--flush', action='store_true', help='Overwrite the existing entries in the database')
+parser.add_argument('--size', type=int, default=50, help='Size for chunks of entries to be processed at a time')
+parser.add_argument('--delay', type=int, default=0, help='Number of seconds to wait between chunks of entries')
+args = parser.parse_args()
 
 def pdf_to_text(pdfPath, meta, literal_page_nums=True):
     with pdfplumber.open(pdfPath) as pdf:
@@ -44,6 +50,14 @@ def pdf_to_text(pdfPath, meta, literal_page_nums=True):
 
 
 if __name__ == '__main__':
+    print(f"got args:")
+    print(args)
+
+    if args.flush:
+        print("FLUSHING THE DATABASE")
+        with open('./entries.json', 'w') as file:
+            file.write('{}')
+
     # Find a pdf files
     SOURCE_PATH = './media/documents'
     pdfs = [f for f in os.listdir(SOURCE_PATH) if f.endswith('.pdf')]
