@@ -1,4 +1,6 @@
 __pycache__/
 
 testing
+entries.json
+entries/*
 
