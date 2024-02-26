@@ -8,7 +8,7 @@ import spacy
 nlp = spacy.load('pt_core_news_sm')
 
 from clean import process_lines, split_sentences
-# from ingest import ingestAll
+from ingest import ingestNew
 
 parser = argparse.ArgumentParser(description='Process a directory of pdfs')
 parser.add_argument('--flush', action='store_true', help='Overwrite the existing entries in the database')
@@ -90,10 +90,5 @@ if __name__ == '__main__':
         print(f"\nFound {len(sents)} sentences in doc\n")
         
 
-        # # Check db for existing before processing
-        # newEntries = list(filter(lambda x: x['id'] not in ENTRIES, sents))
-        # print(f"Found {len(newEntries)} / {len(sents)} to be new entries")
-        # newEntries = newEntries[:3]
-        # prepped = ingestAll(newEntries)
-        # print(json.dumps(prepped[-1], indent=2))
-        # print(prepped[-1]['text'])
+        # Check db for existing before processing
+        ingestNew(sents, sourceType='pdf', sourcePath=pdfPath, chunkSize=args.size, chunkDelay=args.delay)
