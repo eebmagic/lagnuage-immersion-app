@@ -2,13 +2,19 @@ import os
 import json
 import pdfplumber
 from tqdm import tqdm
+import argparse
 
 import spacy
 nlp = spacy.load('pt_core_news_sm')
 
 from clean import process_lines, split_sentences
-# from ingest import ingestAll
+from ingest import ingestNew
 
+parser = argparse.ArgumentParser(description='Process a directory of pdfs')
+parser.add_argument('--flush', action='store_true', help='Overwrite the existing entries in the database')
+parser.add_argument('--size', type=int, default=50, help='Size for chunks of entries to be processed at a time')
+parser.add_argument('--delay', type=int, default=0, help='Number of seconds to wait between chunks of entries')
+args = parser.parse_args()
 
 def pdf_to_text(pdfPath, meta, literal_page_nums=True):
     with pdfplumber.open(pdfPath) as pdf:
@@ -44,15 +50,19 @@ def pdf_to_text(pdfPath, meta, literal_page_nums=True):
 
 
 if __name__ == '__main__':
+    print(f"got args:")
+    print(args)
+
+    if args.flush:
+        print("FLUSHING THE DATABASE")
+        with open('./entries.json', 'w') as file:
+            file.write('{}')
+
     # Find a pdf files
     SOURCE_PATH = './media/documents'
     pdfs = [f for f in os.listdir(SOURCE_PATH) if f.endswith('.pdf')]
     print(pdfs)
 
-    # Load existing entries
-    with open('entries.json') as file:
-        ENTRIES = json.load(file)
-        print(f"Got entries: {ENTRIES}")
 
     with open('media/metadata.json') as file:
         METADATA = json.load(file)
@@ -68,26 +78,17 @@ if __name__ == '__main__':
         doc_meta = METADATA[pdf]
         text_lines, page_nums = pdf_to_text(pdfPath, doc_meta)
         
-        print(text_lines[:5])
-        print(page_nums[:5])
-
 
         # Split the lines into sentences and page nums
         sents = split_sentences(text_lines, page_nums)
 
-        print('\nGOT THESE SENTENCES FROM PAGE 45:')
-        for sent in sents[-100:]:
-            print(f"\t{sent['id']}")
-            print(f"\t{sent['page']}.{sent['sentence_index']}")
-            print(f"\t{sent['text']}")
-            print()
-        print(f"Found {len(sents)} sentences in doc")
+        # for sent in sents:
+        #     print(f"\t{sent['id']}")
+        #     print(f"\t{sent['page']}.{sent['page_sentence_index']}")
+        #     print(f"\t{sent['text']}")
+        #     print()
+        print(f"\nFound {len(sents)} sentences in doc\n")
         
 
-        # # Check db for existing before processing
-        # newEntries = list(filter(lambda x: x['id'] not in ENTRIES, sents))
-        # print(f"Found {len(newEntries)} / {len(sents)} to be new entries")
-        # newEntries = newEntries[:3]
-        # prepped = ingestAll(newEntries)
-        # print(json.dumps(prepped[-1], indent=2))
-        # print(prepped[-1]['text'])
+        # Check db for existing before processing
+        ingestNew(sents, sourceType='pdf', sourcePath=pdfPath, chunkSize=args.size, chunkDelay=args.delay)
