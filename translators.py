@@ -1,7 +1,10 @@
+# TODO: Make generic translator class, and then inherit from it for each specific translator
+
 class Google:
     def __init__(self):
         from googletrans import Translator
         self.translator = Translator()
+        self.metaName = 'googletrans'
 
     def translate(self, text):
         '''
@@ -17,12 +20,13 @@ class Google:
 
 
 class HuggingFace:
-
-    def __init__(self):
+    def __init__(self, modelName='unicamp-dl/translation-pt-en-t5'):
         from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
-        tokenizer = AutoTokenizer.from_pretrained("unicamp-dl/translation-pt-en-t5")
-        model = AutoModelForSeq2SeqLM.from_pretrained("unicamp-dl/translation-pt-en-t5")
+        tokenizer = AutoTokenizer.from_pretrained(modelName)
+        model = AutoModelForSeq2SeqLM.from_pretrained(modelName)
         self.pten_pipeline = pipeline('text2text-generation', model=model, tokenizer=tokenizer)
+
+        self.metaName = f'huggingface/{modelName}'
 
     def translate(self, text):
         if type(text) == str:

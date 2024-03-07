@@ -67,6 +67,7 @@ def prepChunk(items, chunkString=''):
     for item, translation, lemma in zip(items, translations, lemmas):
         out = item.copy()
         out['trans'] = translation
+        out['trans_model'] = Translator.metaName
         out['lemmas'] = lemma
         result.append(out)
     
