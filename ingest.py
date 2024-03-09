@@ -36,23 +36,6 @@ def prepChunk(items, chunkString=''):
     # Generate new data
     print(f"Getting translations for chunk: {chunkString}")
 
-    # Combine into new data
-    # result = []
-    # for item in tqdm(items):
-    #     try:
-    #         out = item.copy()
-    #         translation = Translator.translate(item['text'])
-    #         lemma = lemmatize(item['text'])
-    #         out['trans'] = translation
-    #         out['lemmas'] = lemma
-    #         result.append(out)
-    #     except Exception as e:
-    #         print(f"Error processing item: {e}")
-    #         # Print full exception for debugging
-    #         import traceback
-    #         print(traceback.format_exc())
-    #         print(f"Skipping item")
-
     try:
         lemmas = [lemmatize(item) for item in sents]
         translations = Translator.translate(sents)
@@ -68,6 +51,8 @@ def prepChunk(items, chunkString=''):
         out = item.copy()
         out['trans'] = translation
         out['trans_model'] = Translator.metaName
+        out['target_language'] = Translator.ogLanguage
+        out['user_language'] = Translator.userLanguage
         out['lemmas'] = lemma
         result.append(out)
     
@@ -98,8 +83,6 @@ def ingestAll(items, sourceType, sourcePath, chunkSize=10, chunkDelay=0):
         except Exception as e:
             print(f"Error processing chunk {chunkIndex} - {totalChunks}: {e}")
             print(f"Skipping chunk")
-
-
 
     return result
 

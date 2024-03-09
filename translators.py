@@ -5,6 +5,8 @@ class Google:
         from googletrans import Translator
         self.translator = Translator()
         self.metaName = 'googletrans'
+        self.ogLanguage = 'portuguese'
+        self.userLanguage = 'english'
 
     def translate(self, text):
         '''
@@ -27,6 +29,8 @@ class HuggingFace:
         self.pten_pipeline = pipeline('text2text-generation', model=model, tokenizer=tokenizer)
 
         self.metaName = f'huggingface/{modelName}'
+        self.ogLanguage = 'portuguese'
+        self.userLanguage = 'english'
 
     def translate(self, text):
         if type(text) == str:
