@@ -4,5 +4,6 @@ __pycache__/
 
 testing
 entries.json
+vocab.json
 entries/*
 

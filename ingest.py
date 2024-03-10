@@ -9,8 +9,10 @@ import spacy
 nlp = spacy.load('pt_core_news_sm')
 from nltk.corpus import wordnet as wn
 
-from translators import HuggingFace as T
+from translators import DeepL as T
 Translator = T()
+
+WORD_FREQ_FILTER_THRESHOLD = 0.7
 
 
 def lemmatize(text, parentSnippet=None):
@@ -31,6 +33,10 @@ def lemmatize(text, parentSnippet=None):
             synValues = [(s.name(), s.definition()) for s in synsets]
             specificID =f"{lemma} - {word.pos_} - {parentSnippet}"
 
+            # Filter to ignore super common words (the, a, of, etc.)
+            if wordfreq.zipf_frequency(lemma, 'pt') > WORD_FREQ_FILTER_THRESHOLD:
+                continue
+
             m = {}
             m['text'] = word.text
             m['lemma'] = lemma
@@ -44,9 +50,7 @@ def lemmatize(text, parentSnippet=None):
             m['parent_snippet'] = parentSnippet
             m['generid_id'] = f"{lemma} - {word.pos_}"
             m['specific_id'] = specificID
-            # m['vect'] = word.vector.tolist()
-
-            print(json.dumps(m, indent=2))
+            m['vect'] = word.vector.tolist()
 
             lemmas.append(m)
             ids.append(specificID)
@@ -86,20 +90,20 @@ def prepChunk(items, chunkString=''):
         snippetResults.append(out)
         vocabItemResults.extend(lemmaItems)
     
-    print(json.dumps(snippetResults, indent=2))
-    quit()
 
-    return result
+    return snippetResults, vocabItemResults
 
 
 def ingestAll(items, sourceType, sourcePath, chunkSize=10, chunkDelay=0):
     result = {}
+    allVocabItems = []
     totalChunks = math.ceil(len(items) / chunkSize)
     for i in range(0, len(items), chunkSize):
         chunk = items[i:i+chunkSize]
         chunkIndex = 1 + (i // chunkSize)
         try:
-            preppedChunk = prepChunk(chunk, chunkString=f"{chunkIndex} / {totalChunks}")
+            preppedChunk, vocabItems = prepChunk(chunk, chunkString=f"{chunkIndex} / {totalChunks}")
+            allVocabItems.extend(vocabItems)
             for item in preppedChunk:
                 item['source_type'] = sourceType
                 item['source_path'] = sourcePath
@@ -117,10 +121,18 @@ def ingestAll(items, sourceType, sourcePath, chunkSize=10, chunkDelay=0):
             print(f"Error processing chunk {chunkIndex} - {totalChunks}: {e}")
             print(f"Skipping chunk")
 
-    return result
+    return result, allVocabItems
 
 
-def ingestNew(items, sourceType, sourcePath, entriesSource='./entries.json', chunkSize=10, chunkDelay=0):
+def ingestNew(
+        items,
+        sourceType,
+        sourcePath,
+        entriesSource='./entries.json',
+        vocabSource='./vocab.json',
+        chunkSize=10,
+        chunkDelay=0
+    ):
     # Load existing entries
     with open(entriesSource) as file:
         existingEntries = json.load(file)
@@ -131,10 +143,13 @@ def ingestNew(items, sourceType, sourcePath, entriesSource='./entries.json', chu
     print(f"Found {len(newEntries)} / {len(items)} to be new entries")
 
     # Ingest new entries
-    processedResult = ingestAll(newEntries, sourceType, sourcePath, chunkSize, chunkDelay)
+    processedResult, vocabItems = ingestAll(newEntries, sourceType, sourcePath, chunkSize, chunkDelay)
 
     # Update in file
     existingEntries.update(processedResult)
     with open(entriesSource, 'w') as file:
         json.dump(existingEntries, file)
         print(f"Updated entries file with {len(existingEntries)} total entries ({len(processedResult)} are new)")
+
+    with open(vocabSource, 'w') as file:
+        json.dump(vocabItems, file)
