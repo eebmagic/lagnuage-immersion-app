@@ -1,5 +1,7 @@
 __pycache__/
 
+.env
+
 testing
 entries.json
 entries/*
