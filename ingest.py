@@ -4,14 +4,16 @@ import re
 import json
 from tqdm import tqdm
 
+import wordfreq
 import spacy
 nlp = spacy.load('pt_core_news_sm')
+from nltk.corpus import wordnet as wn
 
 from translators import HuggingFace as T
 Translator = T()
 
 
-def lemmatize(text):
+def lemmatize(text, parentSnippet=None):
     '''
     Default lemmatize function, using spacy.
     '''
@@ -21,23 +23,47 @@ def lemmatize(text):
 
     doc = nlp(text)
     lemmas = []
+    ids = []
     for word in doc:
         lemma = word.lemma_
         if realWord(lemma) and lemma not in lemmas:
-            lemmas.append(lemma.lower())
+            synsets = wn.synsets(lemma, lang='por')
+            synValues = [(s.name(), s.definition()) for s in synsets]
+            specificID =f"{lemma} - {word.pos_} - {parentSnippet}"
 
-    return lemmas
+            m = {}
+            m['text'] = word.text
+            m['lemma'] = lemma
+            m['pos'] = word.pos_
+            m['synsets'] = synValues
+            m['word_freq'] = wordfreq.zipf_frequency(lemma, 'pt')
+            m['tags'] = []
+            m['type'] = 'word'
+            m['morph'] = word.morph.to_dict()
+            m['head'] = word.head.text
+            m['parent_snippet'] = parentSnippet
+            m['generid_id'] = f"{lemma} - {word.pos_}"
+            m['specific_id'] = specificID
+            # m['vect'] = word.vector.tolist()
+
+            print(json.dumps(m, indent=2))
+
+            lemmas.append(m)
+            ids.append(specificID)
+
+    return lemmas, ids
 
 
 def prepChunk(items, chunkString=''):
     # Pull text from items
     sents = [item['text'] for item in items]
+    ids = [item['id'] for item in items]
 
     # Generate new data
     print(f"Getting translations for chunk: {chunkString}")
 
     try:
-        lemmas = [lemmatize(item) for item in sents]
+        lemmas = [lemmatize(sent, parentSnippet=idx) for sent, idx in zip(sents, ids)]
         translations = Translator.translate(sents)
     except Exception as e:
         print(f"Error processing chunk: {e}")
@@ -46,16 +72,23 @@ def prepChunk(items, chunkString=''):
         print(traceback.format_exc())
         print(f"Skipping chunk")
 
-    result = []
+    snippetResults = []
+    vocabItemResults = []
     for item, translation, lemma in zip(items, translations, lemmas):
         out = item.copy()
         out['trans'] = translation
         out['trans_model'] = Translator.metaName
         out['target_language'] = Translator.ogLanguage
         out['user_language'] = Translator.userLanguage
-        out['lemmas'] = lemma
-        result.append(out)
+
+        lemmaItems, lemmaIDs = lemma
+        out['lemmas'] = lemmaIDs
+        snippetResults.append(out)
+        vocabItemResults.extend(lemmaItems)
     
+    print(json.dumps(snippetResults, indent=2))
+    quit()
+
     return result
 
 
