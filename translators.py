@@ -1,7 +1,18 @@
 # TODO: Make generic translator class, and then inherit from it for each specific translator
 import os
 
-class Google:
+from abc import ABC, abstractmethod
+
+class BaseTranslator(ABC):
+    '''
+    This class is used to check that all translators have the required methods.
+    '''
+    @abstractmethod
+    def translate(self):
+        pass
+
+
+class Google(BaseTranslator):
     def __init__(self):
         from googletrans import Translator
         self.translator = Translator()
@@ -22,7 +33,7 @@ class Google:
         return translationResult.text
 
 
-class HuggingFace:
+class HuggingFace(BaseTranslator):
     def __init__(self, modelName='unicamp-dl/translation-pt-en-t5', pipelineType='text2text-generation'):
         self.metaName = f'huggingface/{modelName}'
         self.modelName = modelName
@@ -43,7 +54,7 @@ class HuggingFace:
             return [item['generated_text'] for item in self.pten_pipeline(text)]
 
 
-class HuggingFaceTranslator:
+class HuggingFaceTranslator(BaseTranslator):
     def __init__(self, modelName='facebook/nllb-200-distilled-600M', pipelineType='translation_pt_to_en'):
         self.metaName = f'huggingface/{modelName}'
         self.modelName = modelName
@@ -67,7 +78,7 @@ class HuggingFaceTranslator:
             return self.pipeline(text)
 
 
-class DeepL:
+class DeepL(BaseTranslator):
     def __init__(self):
         self.metaName = 'deepl'
         self.ogLanguage = 'portuguese'

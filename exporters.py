@@ -6,8 +6,38 @@ as well as return existing entrie ids.
 
 import json
 import os
+from abc import ABC, abstractmethod
 
-class LocalFiles:
+class BaseExporter(ABC):
+    '''
+    This class is used to check that all exporters have the required methods.
+    '''
+    @abstractmethod
+    def flush(self):
+        pass
+
+    @abstractmethod
+    def existingSamples(self):
+        pass
+
+    @abstractmethod
+    def getSamples(self, samples=None):
+        pass
+
+    @abstractmethod
+    def existingVocab(self):
+        pass
+
+    @abstractmethod
+    def getVocab(self, vocab=None):
+        pass
+
+    @abstractmethod
+    def ingestItems(self, sampleItems, vocabItems):
+        pass
+
+
+class LocalFiles(BaseExporter):
     def __init__(self, samplesPath='./entries/entries.json', vocabPath='./entries/vocab.json'):
         self.samplesPath = samplesPath
         self.vocabPath = vocabPath
