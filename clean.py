@@ -72,6 +72,7 @@ def split_sentences(lines, numbers):
                     'id': sha256(sent.encode('utf-8')).hexdigest(),
                     'page': properPage,
                     'page_sentence_index': pageCount,
+                    'combined_index': f'{properPage}.{pageCount}',
                     'text': sent,
                 })
             buffer = sents[-1]
@@ -85,6 +86,7 @@ def split_sentences(lines, numbers):
         'text': buffer,
         'page': getMostFreq(numBuffer),
         'page_sentence_index': pageCount,
+        'combined_index': f'{properPage}.{pageCount}',
         'id': sha256(buffer.encode('utf-8')).hexdigest()
     })
 
