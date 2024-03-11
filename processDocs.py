@@ -14,7 +14,6 @@ parser = argparse.ArgumentParser(description='Process a directory of pdfs')
 parser.add_argument('--flush', action='store_true', help='Overwrite the existing entries in the database')
 parser.add_argument('--size', type=int, default=50, help='Size for chunks of entries to be processed at a time')
 parser.add_argument('--delay', type=int, default=0, help='Number of seconds to wait between chunks of entries')
-parser.add_argument('--db-path', type=str, default='./entries/entries.json', help='Path to the database file')
 args = parser.parse_args()
 
 def pdf_to_text(pdfPath, meta, literal_page_nums=True):
@@ -54,12 +53,9 @@ if __name__ == '__main__':
     print(f"got args:")
     print(args)
 
-    if args.flush or not os.path.exists(args.db_path):
-        if args.flush:
-            print("FLUSHING THE DATABASE")
-
-        with open(args.db_path, 'w') as file:
-            file.write('{}')
+    if args.flush:
+        from CONFIG import PreferredExporter as Exporter
+        Exporter.flush()
 
     # Find a pdf files
     SOURCE_PATH = './media/documents'
@@ -94,4 +90,4 @@ if __name__ == '__main__':
         
 
         # Check db for existing before processing
-        ingestNew(sents, sourceType='pdf', sourcePath=pdfPath, entriesSource=args.db_path, chunkSize=args.size, chunkDelay=args.delay)
+        ingestNew(sents, sourceType='pdf', sourcePath=pdfPath, chunkSize=args.size, chunkDelay=args.delay)
