@@ -68,11 +68,11 @@ def prepChunk(items, chunkString=''):
     print(f"Getting translations for chunk: {chunkString}")
 
     try:
-        vocabItemResults = {}
+        sampleItemResults = {}
         lemmaSets = []
         for sent, idx in zip(sents, ids):
             lresult = lemmatize(sent, parentSnippet=idx)
-            vocabItemResults.update(lresult)
+            sampleItemResults.update(lresult)
             lemmaSets.append(list(lresult.keys()))
         translations = Translator.translate(sents)
     except Exception as e:
@@ -92,28 +92,28 @@ def prepChunk(items, chunkString=''):
         out['target_language'] = Translator.ogLanguage
         out['user_language'] = Translator.userLanguage
 
-        out['lemmas'] = lemmaIds
+        out['contained_samples'] = lemmaIds
         snippetResults[out['id']] = out
 
-    return snippetResults, vocabItemResults
+    return snippetResults, sampleItemResults
 
 
 def ingestAll(items, sourceType, sourcePath, chunkSize=10, chunkDelay=0):
+    allSnippetItems = {}
     allSampleItems = {}
-    allVocabItems = {}
     totalChunks = math.ceil(len(items) / chunkSize)
     for i in range(0, len(items), chunkSize):
         chunk = items[i:i+chunkSize]
         chunkIndex = 1 + (i // chunkSize)
         try:
-            sampleItems, vocabItems = prepChunk(chunk, chunkString=f"{chunkIndex} / {totalChunks}")
-            for item in sampleItems.values():
+            snippetItems, sampleItems = prepChunk(chunk, chunkString=f"{chunkIndex} / {totalChunks}")
+            for item in snippetItems.values():
                 item['source_type'] = sourceType
                 item['source_path'] = sourcePath
-                allSampleItems[item['id']] = item
+                allSnippetItems[item['id']] = item
 
-            for item in vocabItems.values():
-                allVocabItems[item['specific_id']] = item
+            for item in sampleItems.values():
+                allSampleItems[item['specific_id']] = item
 
             if chunkDelay:
                 print(f"Sleeping for {chunkDelay} seconds...")
@@ -127,7 +127,7 @@ def ingestAll(items, sourceType, sourcePath, chunkSize=10, chunkDelay=0):
             print(f"Error ingesting chunk {chunkIndex} - {totalChunks}: {e}")
             print(f"Skipping chunk")
 
-    return allSampleItems, allVocabItems
+    return allSnippetItems, allSampleItems
 
 
 def ingestNew(
@@ -138,7 +138,7 @@ def ingestNew(
         chunkDelay=0
     ):
     # Load existing entries
-    existingEntries = Exporter.existingSamples()
+    existingEntries = Exporter.existingSnippets()
 
     # Filter out existing entries
     newEntries = list(filter(lambda x: x['id'] not in existingEntries, items))
@@ -146,6 +146,6 @@ def ingestNew(
 
     # Ingest new entries
     if newEntries:
-        sampleItems, vocabItems = ingestAll(newEntries, sourceType, sourcePath, chunkSize, chunkDelay)
-        print(f"Ingesting {len(sampleItems)} samples and {len(vocabItems)} vocab items")
-        Exporter.ingestItems(sampleItems, vocabItems)
+        snippetItems, sampleItems = ingestAll(newEntries, sourceType, sourcePath, chunkSize, chunkDelay)
+        print(f"Ingesting {len(snippetItems)} snippets and {len(sampleItems)} sample items")
+        Exporter.ingestItems(snippetItems, sampleItems)

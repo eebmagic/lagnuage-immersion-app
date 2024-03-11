@@ -1,6 +1,6 @@
 '''
 This file are exchangable methods for dumping data somewhere.
-Classes should be able to ingest a list of new samples and vocab items,
+Classes should be able to ingest a list of new snippets and sample items,
 as well as return existing entrie ids.
 '''
 
@@ -18,99 +18,99 @@ class BaseExporter(ABC):
         pass
 
     @abstractmethod
+    def existingSnippets(self):
+        pass
+
+    @abstractmethod
+    def getSnippets(self, snippets=None):
+        pass
+
+    @abstractmethod
     def existingSamples(self):
         pass
 
     @abstractmethod
-    def getSamples(self, samples=None):
+    def getSample(self, sample=None):
         pass
 
     @abstractmethod
-    def existingVocab(self):
-        pass
-
-    @abstractmethod
-    def getVocab(self, vocab=None):
-        pass
-
-    @abstractmethod
-    def ingestItems(self, sampleItems, vocabItems):
+    def ingestItems(self, snippetItems, sampleItems):
         pass
 
 
 class LocalFiles(BaseExporter):
-    def __init__(self, samplesPath='./entries/entries.json', vocabPath='./entries/vocab.json'):
+    def __init__(self, snippetsPath='./entries/entries.json', samplesPath='./entries/sample.json'):
+        self.snippetsPath = snippetsPath
         self.samplesPath = samplesPath
-        self.vocabPath = vocabPath
 
         # Check file exists and is not empty
-        if not os.path.exists(samplesPath) or os.path.getsize(samplesPath) == 0:
-            print(f"Creating new entries file at {samplesPath}")
-            with open(samplesPath, 'w') as file:
+        if not os.path.exists(snippetsPath) or os.path.getsize(snippetsPath) == 0:
+            print(f"Creating new entries file at {snippetsPath}")
+            with open(snippetsPath, 'w') as file:
                 file.write('{}')
 
-        if not os.path.exists(vocabPath) or os.path.getsize(vocabPath) == 0:
-            with open(vocabPath, 'w') as file:
+        if not os.path.exists(samplesPath) or os.path.getsize(samplesPath) == 0:
+            with open(samplesPath, 'w') as file:
                 file.write('{}')
 
     def flush(self):
         print("FLUSHING THE DATABASE LOCAL FILE")
+        with open(self.snippetsPath, 'w') as file:
+            file.write('{}')
+
         with open(self.samplesPath, 'w') as file:
             file.write('{}')
 
-        with open(self.vocabPath, 'w') as file:
-            file.write('{}')
+    # Handle snippet items
+    def existingSnippets(self):
+        with open(self.snippetsPath) as file:
+            existingEntries = json.load(file)
+            return set(existingEntries.keys())
+
+    def getSnippets(self, snippets=None):
+        if snippets == None:
+            snippets = self.existingSnippets()
+
+        with open(self.snippetsPath) as file:
+            existingEntries = json.load(file)
+            return [existingEntries[idx] for idx in snippets]
 
     # Handle sample items
     def existingSamples(self):
         with open(self.samplesPath) as file:
-            existingEntries = json.load(file)
-            return set(existingEntries.keys())
+            existingSample = json.load(file)
+            return set(existingSample.keys())
 
-    def getSamples(self, samples=None):
-        if samples == None:
-            samples = self.existingSamples()
+    def getSample(self, sample=None):
+        if sample == None:
+            sample = self.existingSample()
 
         with open(self.samplesPath) as file:
-            existingEntries = json.load(file)
-            return [existingEntries[idx] for idx in samples]
-
-    # Handle vocab items
-    def existingVocab(self):
-        with open(self.vocabPath) as file:
-            existingVocab = json.load(file)
-            return set(existingVocab.keys())
-
-    def getVocab(self, vocab=None):
-        if vocab == None:
-            vocab = self.existingVocab()
-
-        with open(self.vocabPath) as file:
-            existingVocab = json.load(file)
-            return [existingVocab[idx] for idx in vocab]
+            existingSample = json.load(file)
+            return [existingSample[idx] for idx in sample]
 
     # Handle new items
-    def ingestItems(self, sampleItems, vocabItems):
+    def ingestItems(self, snippetItems, sampleItems):
         '''
         This func assumes that the provided items are new to the collections
         '''
-        # Process samples
-        with open(self.samplesPath) as file:
+        # Process snippets
+        with open(self.snippetsPath) as file:
             existingEntries = json.load(file)
 
-        existingEntries.update(sampleItems)
+        existingEntries.update(snippetItems)
 
-        with open(self.samplesPath, 'w') as file:
+        with open(self.snippetsPath, 'w') as file:
             json.dump(existingEntries, file)
 
-        # Process vocab
-        with open(self.vocabPath) as file:
-            existingVocab = json.load(file)
+        # Process sample
+        with open(self.samplesPath) as file:
+            existingSample = json.load(file)
 
-        existingVocab.update(vocabItems)
+        existingSample.update(sampleItems)
 
-        with open(self.vocabPath, 'w') as file:
-            json.dump(existingVocab, file)
+        with open(self.samplesPath, 'w') as file:
+            json.dump(existingSample, file)
 
 
 class MongoExporter(BaseExporter):
@@ -121,47 +121,47 @@ class MongoExporter(BaseExporter):
         # TODO: Check if collections and db exist
 
         self.db = self.client['language']
-        self.samplesCollection = self.db['samples']
-        self.vocabCollection = self.db['vocab']
+        self.snippetsCollection = self.db['snippets']
+        self.sampleCollection = self.db['samples']
 
-        self.SAMPLE_KEY = 'id'
-        self.VOCAB_KEY = 'specific_id'
+        self.SNIPPET_KEY = 'id'
+        self.SAMPLE_KEY = 'specific_id'
 
     def flush(self):
         print("FLUSHING THE DATABASE MONGO COLLECTIONS")
-        self.samplesCollection.delete_many({})
-        self.vocabCollection.delete_many({})
+        self.snippetsCollection.delete_many({})
+        self.sampleCollection.delete_many({})
+
+    def existingSnippets(self):
+        result = list(self.snippetsCollection.find({}, {self.SNIPPET_KEY: 1, '_id': 0}))
+        values = [item[self.SNIPPET_KEY] for item in result]
+
+        return values
+
+    def getSnippets(self, snippets=None, limit=0):
+        if snippets == None:
+            snippets = self.existingSnippets()
+
+        result = list(self.snippetsCollection.find({self.SNIPPET_KEY: {'$in': snippets}}, limit=limit))
+        return result
 
     def existingSamples(self):
-        result = list(self.samplesCollection.find({}, {self.SAMPLE_KEY: 1, '_id': 0}))
+        result = list(self.sampleCollection.find({}, {self.SAMPLE_KEY: 1, '_id': 0}))
         values = [item[self.SAMPLE_KEY] for item in result]
 
         return values
 
-    def getSamples(self, samples=None, limit=0):
-        if samples == None:
-            samples = self.existingSamples()
+    def getSample(self, sample=None, limit=0):
+        if sample == None:
+            sample = self.existingSample()
 
-        result = list(self.samplesCollection.find({self.SAMPLE_KEY: {'$in': samples}}, limit=limit))
+        result = list(self.sampleCollection.find({self.SAMPLE_KEY: {'$in': sample}}, limit=limit))
         return result
 
-    def existingVocab(self):
-        result = list(self.vocabCollection.find({}, {self.VOCAB_KEY: 1, '_id': 0}))
-        values = [item[self.VOCAB_KEY] for item in result]
+    def ingestItems(self, snippetItems, sampleItems):
+        print(f"ingesting snippets: {len(snippetItems)} of snippets obj with type {type(snippetItems)}")
+        # Process snippets
+        self.snippetsCollection.insert_many(snippetItems.values())
 
-        return values
-
-    def getVocab(self, vocab=None, limit=0):
-        if vocab == None:
-            vocab = self.existingVocab()
-
-        result = list(self.vocabCollection.find({self.VOCAB_KEY: {'$in': vocab}}, limit=limit))
-        return result
-
-    def ingestItems(self, sampleItems, vocabItems):
-        print(f"ingesting samples: {len(sampleItems)} of samples obj with type {type(sampleItems)}")
-        # Process samples
-        self.samplesCollection.insert_many(sampleItems.values())
-
-        # Process vocab
-        self.vocabCollection.insert_many(vocabItems.values())
+        # Process sample
+        self.sampleCollection.insert_many(sampleItems.values())
