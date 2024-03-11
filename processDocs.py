@@ -27,7 +27,7 @@ def pdf_to_text(pdfPath, meta, literal_page_nums=True):
         # Get all the lines from all the pages
         textLines = []
         pageNums = []
-        
+
         print(f"ITERATIVELY READING PAGES...")
         with tqdm(total=len(pdf.pages)) as pbar:
             for i, page in tqdm(enumerate(pdf.pages)):
@@ -76,7 +76,7 @@ if __name__ == '__main__':
         print(METADATA.keys(), pdf in METADATA.keys())
         doc_meta = METADATA[pdf]
         text_lines, page_nums = pdf_to_text(pdfPath, doc_meta)
-        
+
 
         # Split the lines into sentences and page nums
         sents = split_sentences(text_lines, page_nums)
@@ -87,7 +87,7 @@ if __name__ == '__main__':
         #     print(f"\t{sent['text']}")
         #     print()
         print(f"\nFound {len(sents)} sentences in doc\n")
-        
+
 
         # Check db for existing before processing
         ingestNew(sents, sourceType='pdf', sourcePath=pdfPath, chunkSize=args.size, chunkDelay=args.delay)

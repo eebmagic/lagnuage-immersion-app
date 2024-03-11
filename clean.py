@@ -13,7 +13,7 @@ def check_line(line):
 def clean(line):
     if line.startswith('- '):
         line = line[2:]
-    
+
     return line
 
 def process_lines(lines):
@@ -30,7 +30,7 @@ def process_lines(lines):
 
         else:
             out.append(line)
-    
+
     cleaned = list(map(clean, out))
 
     return cleaned, pageNum
@@ -43,12 +43,12 @@ def split_sentences(lines, numbers):
             if num not in counts:
                 counts[num] = 0
             counts[num] += 1
-        
+
         maxval = max(counts.values())
         for key, val in counts.items():
             if val == maxval:
                 return key
-        
+
         if nums[0]:
             return nums[0]
         else:
@@ -76,7 +76,7 @@ def split_sentences(lines, numbers):
                 })
             buffer = sents[-1]
             numBuffer = [numBuffer[-1]]
-    
+
     # Get the last sentence from leftover buffers
     properPage = getMostFreq(numBuffer)
     pageCount = pageSentCounts.get(properPage, 0)

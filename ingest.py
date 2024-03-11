@@ -94,7 +94,7 @@ def prepChunk(items, chunkString=''):
 
         out['lemmas'] = lemmaIds
         snippetResults[out['id']] = out
-    
+
     return snippetResults, vocabItemResults
 
 
@@ -139,7 +139,7 @@ def ingestNew(
     ):
     # Load existing entries
     existingEntries = Exporter.existingSamples()
-    
+
     # Filter out existing entries
     newEntries = list(filter(lambda x: x['id'] not in existingEntries, items))
     print(f"Found {len(newEntries)} / {len(items)} to be new entries")
