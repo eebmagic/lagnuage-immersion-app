@@ -81,6 +81,7 @@ def prepChunk(items, chunkString=''):
         import traceback
         print(traceback.format_exc())
         print(f"Skipping chunk")
+        raise e
 
 
     snippetResults = {}
@@ -125,7 +126,6 @@ def ingestAll(items, sourceType, sourcePath, chunkSize=10, chunkDelay=0):
         except Exception as e:
             print(f"Error ingesting chunk {chunkIndex} - {totalChunks}: {e}")
             print(f"Skipping chunk")
-            raise e
 
     return allSampleItems, allVocabItems
 
@@ -147,4 +147,5 @@ def ingestNew(
     # Ingest new entries
     if newEntries:
         sampleItems, vocabItems = ingestAll(newEntries, sourceType, sourcePath, chunkSize, chunkDelay)
+        print(f"Ingesting {len(sampleItems)} samples and {len(vocabItems)} vocab items")
         Exporter.ingestItems(sampleItems, vocabItems)

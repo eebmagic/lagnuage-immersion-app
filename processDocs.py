@@ -13,7 +13,7 @@ from ingest import ingestNew
 parser = argparse.ArgumentParser(description='Process a directory of pdfs')
 parser.add_argument('--flush', action='store_true', help='Overwrite the existing entries in the database')
 parser.add_argument('--size', type=int, default=50, help='Size for chunks of entries to be processed at a time')
-parser.add_argument('--delay', type=int, default=0, help='Number of seconds to wait between chunks of entries')
+parser.add_argument('--delay', type=float, default=0, help='Number of seconds to wait between chunks of entries')
 args = parser.parse_args()
 
 def pdf_to_text(pdfPath, meta, literal_page_nums=True):
