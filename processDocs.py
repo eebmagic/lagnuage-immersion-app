@@ -54,8 +54,8 @@ if __name__ == '__main__':
     print(args)
 
     if args.flush:
-        from CONFIG import PreferredExporter as Exporter
-        Exporter.flush()
+        from CONFIG import PreferredInterface as Interface
+        Interface.flush()
 
     # Find a pdf files
     SOURCE_PATH = './media/documents'

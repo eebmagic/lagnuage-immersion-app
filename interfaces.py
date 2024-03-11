@@ -9,9 +9,9 @@ import os
 from abc import ABC, abstractmethod
 import pymongo
 
-class BaseExporter(ABC):
+class BaseInterface(ABC):
     '''
-    This class is used to check that all exporters have the required methods.
+    This class is used to check that all interfaces have the required methods.
     '''
     @abstractmethod
     def flush(self):
@@ -38,7 +38,7 @@ class BaseExporter(ABC):
         pass
 
 
-class LocalFiles(BaseExporter):
+class LocalFiles(BaseInterface):
     def __init__(self, snippetsPath='./entries/entries.json', samplesPath='./entries/sample.json'):
         self.snippetsPath = snippetsPath
         self.samplesPath = samplesPath
@@ -113,7 +113,7 @@ class LocalFiles(BaseExporter):
             json.dump(existingSample, file)
 
 
-class MongoExporter(BaseExporter):
+class MongoInterface(BaseInterface):
     def __init__(self, mongoURI):
         self.mongoURI = mongoURI
         self.client = pymongo.MongoClient(mongoURI)

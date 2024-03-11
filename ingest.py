@@ -8,7 +8,7 @@ nlp = spacy.load('pt_core_news_sm')
 from nltk.corpus import wordnet as wn
 
 from CONFIG import PreferredTranslator as Translator
-from CONFIG import PreferredExporter as Exporter
+from CONFIG import PreferredInterface as Interface
 
 WORD_FREQ_FILTER_THRESHOLD = 7.0
 
@@ -138,7 +138,7 @@ def ingestNew(
         chunkDelay=0
     ):
     # Load existing entries
-    existingEntries = Exporter.existingSnippets()
+    existingEntries = Interface.existingSnippets()
 
     # Filter out existing entries
     newEntries = list(filter(lambda x: x['id'] not in existingEntries, items))
@@ -148,4 +148,4 @@ def ingestNew(
     if newEntries:
         snippetItems, sampleItems = ingestAll(newEntries, sourceType, sourcePath, chunkSize, chunkDelay)
         print(f"Ingesting {len(snippetItems)} snippets and {len(sampleItems)} sample items")
-        Exporter.ingestItems(snippetItems, sampleItems)
+        Interface.ingestItems(snippetItems, sampleItems)
