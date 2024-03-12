@@ -24,7 +24,7 @@ def lemmatize(text, parentSnippet=None):
     doc = nlp(text)
     result = {}
     seenLemmas = set()
-    for word in doc:
+    for i, word in enumerate(doc):
         lemma = word.lemma_
         freq = wordfreq.zipf_frequency(lemma, 'pt')
 
@@ -33,7 +33,7 @@ def lemmatize(text, parentSnippet=None):
 
             synsets = wn.synsets(lemma, lang='por')
             synValues = [(s.name(), s.definition()) for s in synsets]
-            specificID =f"{lemma} - {word.pos_} - {parentSnippet}"
+            specificID =f"{lemma} - {word.pos_} - {i} - {parentSnippet}"
 
             # Filter to ignore super common words (the, a, of, etc.)
             if freq > WORD_FREQ_FILTER_THRESHOLD:
@@ -45,6 +45,7 @@ def lemmatize(text, parentSnippet=None):
             m['pos'] = word.pos_
             m['synsets'] = synValues
             m['word_freq'] = freq
+            m['sentence_order_position'] = i
             m['tags'] = []
             m['type'] = 'word'
             m['morph'] = word.morph.to_dict()
