@@ -43,6 +43,7 @@ def lemmatize(text, parentSnippet=None):
             m['text'] = word.text
             m['lemma'] = lemma
             m['pos'] = word.pos_
+            m['vocab_id'] = f"{lemma} - {word.pos_}"
             m['synsets'] = synValues
             m['word_freq'] = freq
             m['sentence_order_position'] = i
@@ -150,3 +151,5 @@ def ingestNew(
         snippetItems, sampleItems = ingestAll(newEntries, sourceType, sourcePath, chunkSize, chunkDelay)
         print(f"Ingesting {len(snippetItems)} snippets and {len(sampleItems)} sample items")
         Interface.ingestItems(snippetItems, sampleItems)
+
+        # Create entries for new vocab

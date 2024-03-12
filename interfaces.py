@@ -123,9 +123,12 @@ class MongoInterface(BaseInterface):
         self.db = self.client['language']
         self.snippetsCollection = self.db['snippets']
         self.sampleCollection = self.db['samples']
+        self.vocabCollection = self.db['vocab']
 
         self.SNIPPET_KEY = 'id'
         self.SAMPLE_KEY = 'specific_id'
+        self.SAMPLE_VOCAB_POINTER_KEY = 'vocab_id'
+        self.VOCAB_KEY = 'id'
 
     def flush(self):
         print("FLUSHING THE DATABASE MONGO COLLECTIONS")
@@ -158,10 +161,50 @@ class MongoInterface(BaseInterface):
         result = list(self.sampleCollection.find({self.SAMPLE_KEY: {'$in': sample}}, limit=limit))
         return result
 
+    def existingVocab(self):
+        result = list(self.vocabCollection.find({}, {self.VOCAB_KEY: 1, '_id': 0}))
+        values = [item[self.VOCAB_KEY] for item in result]
+
+        return values
+
+    def getVocab(self, vocab=None, limit=0):
+        if vocab == None:
+            vocab = self.existingVocab()
+
+        result = list(self.vocabCollection.find({self.VOCAB_KEY: {'$in': vocab}}, limit=limit))
+        return result
+
     def ingestItems(self, snippetItems, sampleItems):
         print(f"ingesting snippets: {len(snippetItems)} of snippets obj with type {type(snippetItems)}")
         # Process snippets
         self.snippetsCollection.insert_many(snippetItems.values())
 
-        # Process sample
+        # Process samples
         self.sampleCollection.insert_many(sampleItems.values())
+
+        # Build vocab
+        existingVocab = set(self.existingVocab())
+
+        # Update vocab
+        for sample in sampleItems.values():
+            if sample[self.SAMPLE_VOCAB_POINTER_KEY] not in existingVocab:
+                self.vocabCollection.insert_one({
+                    self.VOCAB_KEY: sample[self.SAMPLE_VOCAB_POINTER_KEY],
+                    'lemma': sample['lemma'],
+                    'pos': sample['pos'],
+                    'rep_data': {},
+                    'parents': [sample['parent_snippet']],
+                    'samples': [sample[self.SAMPLE_KEY]]
+                })
+
+                existingVocab.add(sample[self.SAMPLE_VOCAB_POINTER_KEY])
+            else:
+                self.vocabCollection.update_one(
+                    {self.VOCAB_KEY: sample[self.SAMPLE_VOCAB_POINTER_KEY]},
+                    {
+                        '$addToSet': {
+                            'parents': sample['parent_snippet'],
+                            'samples': sample[self.SAMPLE_KEY]
+                        }
+                    }
+                )
