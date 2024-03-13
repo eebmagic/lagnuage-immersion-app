@@ -194,7 +194,13 @@ class MongoInterface(BaseInterface):
                     'lemma': sample['lemma'],
                     'pos': sample['pos'],
                     'word_freq': sample['word_freq'],
-                    'rep_data': {},
+                    'rep_data': {
+                        'last_review': None,
+                        'current_interval': 1,
+                        'ease': 2.5,
+                        'quality': -1,
+                        'history': [],
+                    },
                     'tags': [],
                     'parents': [sample['parent_snippet']],
                     'samples': [sample[self.SAMPLE_KEY]]
