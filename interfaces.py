@@ -134,6 +134,7 @@ class MongoInterface(BaseInterface):
         print("FLUSHING THE DATABASE MONGO COLLECTIONS")
         self.snippetsCollection.delete_many({})
         self.sampleCollection.delete_many({})
+        self.vocabCollection.delete_many({})
 
     def existingSnippets(self):
         result = list(self.snippetsCollection.find({}, {self.SNIPPET_KEY: 1, '_id': 0}))
@@ -192,7 +193,9 @@ class MongoInterface(BaseInterface):
                     self.VOCAB_KEY: sample[self.SAMPLE_VOCAB_POINTER_KEY],
                     'lemma': sample['lemma'],
                     'pos': sample['pos'],
+                    'word_freq': sample['word_freq'],
                     'rep_data': {},
+                    'tags': [],
                     'parents': [sample['parent_snippet']],
                     'samples': [sample[self.SAMPLE_KEY]]
                 })
