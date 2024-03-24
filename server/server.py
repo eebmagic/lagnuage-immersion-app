@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import pymongo
 import random
 
@@ -34,6 +34,7 @@ def getBestVocab(N_vocab=20):
 
 
 @app.route('/snippets', methods=['GET'])
+@cross_origin()
 def getSnippets():
     if request.method == 'GET':
         return jsonify(getBestVocab())
