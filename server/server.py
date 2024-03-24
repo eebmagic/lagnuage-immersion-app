@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import pymongo
 import random
 
 app = Flask(__name__)
+CORS(app)
 
 client = pymongo.MongoClient('mongodb://localhost:27017/')
 vocab = client['language']['vocab']
