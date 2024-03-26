@@ -1,13 +1,19 @@
 import './App.css'
 import { Routes, Route, Outlet, Link } from 'react-router-dom';
 import { About } from './pages/About';
+import { Learn } from './pages/Learn';
+
+import "primereact/resources/themes/lara-dark-blue/theme.css";
+import "primeicons/primeicons.css";
 
 function App() {
     return (
         <Routes>
             <Route path="/" element={<PrimaryLayout />}>
                 <Route index element={<Hello />} />
+                <Route path="learn" element={<Learn />} />
                 <Route path="about" element={<About />} />
+
             </Route>
         </Routes>
     )
@@ -27,6 +33,7 @@ function Hello() {
     return (
         <div>
           <h1>HELLO WORLD (from App.jsx)</h1>
+          <Link to="/learn">Learn</Link>
           <Link to="/about">About</Link>
         </div>
     )
