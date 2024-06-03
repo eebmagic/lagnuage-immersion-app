@@ -2,8 +2,5 @@ __pycache__/
 
 .env
 
-testing
-entries.json
-vocab.json
-entries/*
-
+testing/
+entries/
