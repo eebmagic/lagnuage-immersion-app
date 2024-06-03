@@ -70,10 +70,12 @@ def prepChunk(items, chunkString=''):
     try:
         sampleItemResults = {}
         lemmaSets = []
+        vocabSets = []
         for sent, idx in zip(sents, ids):
             lresult = lemmatize(sent, parentSnippet=idx)
             sampleItemResults.update(lresult)
             lemmaSets.append(list(lresult.keys()))
+            vocabSets.append(list(item['vocab_id'] for item in lresult.values()))
         translations = Translator.translate(sents)
     except Exception as e:
         print(f"Error prepping chunk: {e}")
@@ -85,14 +87,15 @@ def prepChunk(items, chunkString=''):
 
 
     snippetResults = {}
-    for item, translation, lemmaIds in zip(items, translations, lemmaSets):
+    for item, translation, lemmaIds, vocabIds in zip(items, translations, lemmaSets, vocabSets):
         out = item.copy()
-        out['trans'] = translation
-        out['trans_model'] = Translator.metaName
+        out['translation'] = translation
+        out['translation_model'] = Translator.metaName
         out['target_language'] = Translator.ogLanguage
         out['user_language'] = Translator.userLanguage
 
         out['contained_samples'] = lemmaIds
+        out['contained_vocab'] = vocabIds
         snippetResults[out['id']] = out
 
     return snippetResults, sampleItemResults
