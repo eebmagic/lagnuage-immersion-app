@@ -14,15 +14,18 @@ parser = argparse.ArgumentParser(description='Process a directory of pdfs')
 parser.add_argument('--flush', action='store_true', help='Overwrite the existing entries in the database')
 parser.add_argument('--size', type=int, default=50, help='Size for chunks of entries to be processed at a time')
 parser.add_argument('--delay', type=float, default=0, help='Number of seconds to wait between chunks of entries')
+parser.add_argument('--pages', type=int, default=-1, help='Number of pages to ingest (default: -1 for all)')
 args = parser.parse_args()
 
-def pdf_to_text(pdfPath, meta, literal_page_nums=True):
+def pdf_to_text(pdfPath, meta, literal_page_nums=True, page_limit=None):
     with pdfplumber.open(pdfPath) as pdf:
         print(f"Processing doc: {pdfPath}")
         print(f"  with {len(pdf.pages)} pages")
 
         start_page = meta.get('start_page', 1) - 1
         end_page = meta.get('end_page', float('inf')) - 1
+        if page_limit and page_limit > 0:
+            end_page = min(end_page, start_page + page_limit)
 
         # Get all the lines from all the pages
         textLines = []
@@ -30,7 +33,7 @@ def pdf_to_text(pdfPath, meta, literal_page_nums=True):
 
         print(f"ITERATIVELY READING PAGES...")
         with tqdm(total=len(pdf.pages)) as pbar:
-            for i, page in tqdm(enumerate(pdf.pages)):
+            for i, page in tqdm(enumerate(pdf.pages[:end_page])):
                 if (i < start_page) or (i+1 > end_page):
                     pbar.update(1)
                     continue
@@ -75,7 +78,11 @@ if __name__ == '__main__':
         # Load text from file
         print(METADATA.keys(), pdf in METADATA.keys())
         doc_meta = METADATA[pdf]
-        text_lines, page_nums = pdf_to_text(pdfPath, doc_meta)
+        text_lines, page_nums = pdf_to_text(
+            pdfPath,
+            doc_meta,
+            page_limit=args.pages,
+        )
 
 
         # Split the lines into sentences and page nums
@@ -90,4 +97,10 @@ if __name__ == '__main__':
 
 
         # Check db for existing before processing
-        ingestNew(sents, sourceType='pdf', sourcePath=pdfPath, chunkSize=args.size, chunkDelay=args.delay)
+        ingestNew(
+            sents,
+            sourceType='pdf',
+            sourcePath=pdfPath,
+            chunkSize=args.size,
+            chunkDelay=args.delay,
+        )

@@ -11,6 +11,17 @@ class BaseTranslator(ABC):
     def translate(self):
         pass
 
+class DummyTranslator(BaseTranslator):
+    '''
+    Just returns the same text for testing purposes.
+    '''
+    def __init__(self):
+        self.metaName = 'dummy'
+        self.ogLanguage = 'portuguese'
+        self.userLanguage = 'english'
+
+    def translate(self, text):
+        return text
 
 class Google(BaseTranslator):
     def __init__(self):

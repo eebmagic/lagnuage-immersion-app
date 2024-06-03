@@ -59,6 +59,7 @@ def split_sentences(lines, numbers):
     buffer = ""
     numBuffer = []
     pageSentCounts = {}
+    sentenceCounter = 0
     for line, num in zip(lines, numbers):
         buffer = (buffer + ' ' + line).strip()
         numBuffer.append(num)
@@ -73,21 +74,25 @@ def split_sentences(lines, numbers):
                     'page': properPage,
                     'page_sentence_index': pageCount,
                     'combined_index': f'{properPage}.{pageCount}',
+                    'media_index': sentenceCounter,
                     'text': sent,
                 })
+                sentenceCounter += 1
             buffer = sents[-1]
             numBuffer = [numBuffer[-1]]
 
+    # TODO: Having this extra iteration outside the loop is a STRONG code smell.
     # Get the last sentence from leftover buffers
     properPage = getMostFreq(numBuffer)
     pageCount = pageSentCounts.get(properPage, 0)
     pageSentCounts[properPage] = pageCount + 1
     out.append({
-        'text': buffer,
+        'id': sha256(buffer.encode('utf-8')).hexdigest(),
         'page': getMostFreq(numBuffer),
         'page_sentence_index': pageCount,
         'combined_index': f'{properPage}.{pageCount}',
-        'id': sha256(buffer.encode('utf-8')).hexdigest()
+        'media_index': sentenceCounter,
+        'text': buffer,
     })
 
     return out

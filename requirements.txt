@@ -2,4 +2,4 @@ pdfplumber
 nltk
 spacy
 googletrans
-
+wordfreq
