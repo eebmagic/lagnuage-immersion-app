@@ -4,6 +4,7 @@ import pymongo
 import random
 import json
 from bson import json_util
+from bson.objectid import ObjectId
 
 app = Flask(__name__)
 CORS(app)
@@ -11,6 +12,7 @@ CORS(app)
 client = pymongo.MongoClient('mongodb://localhost:27017/')
 vocab = client['language']['vocab']
 snippets = client['language']['snippets']
+USER_SETTINGS_COLLECTION = client['language']['user_settings']
 
 def getBestVocab(N=20, num_parents=2):
     '''
@@ -30,7 +32,6 @@ def getBestVocab(N=20, num_parents=2):
         random.shuffle(parents)
 
         goodParentIDs.extend(parents[:num_parents])
-    
 
     print(f"Finding snippets for {len(goodParentIDs)} parent IDs")
     goodSnippets = list(snippets.find({'id': {'$in': goodParentIDs}}, {'_id': 0}))
@@ -86,6 +87,32 @@ def getNextSnippet():
         processedNext = json.loads(json_util.dumps(nextSnippetDoc))
 
         return jsonify(processedNext)
+
+@app.route('/user', methods=['GET'])
+@cross_origin()
+def handleUser():
+    userId = request.args.get('id')
+    if not userId:
+        return jsonify({'error': 'No user id provided.'}), 400
+
+    try:
+        userBsonId = ObjectId(userId)
+    except:
+        return jsonify({
+            'error': 'Invalid user id provided. Must be a valid monog ObjectId format.'
+        }), 400
+
+    try:
+        userDoc = USER_SETTINGS_COLLECTION.find_one({'_id': userBsonId})
+    except:
+        return jsonify({
+            'error': f'Error querying for user document with id: {userId}'
+        }), 500
+
+    if not userDoc:
+        return jsonify({'error': f'No user found with id: {userId}'}), 404
+
+    return jsonify(json.loads(json_util.dumps(userDoc)))
 
 
 if __name__ == '__main__':
