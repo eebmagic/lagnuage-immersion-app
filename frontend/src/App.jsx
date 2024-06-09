@@ -2,22 +2,23 @@ import './App.css'
 import { Routes, Route, Outlet, Link, useNavigate } from 'react-router-dom';
 
 import { Menubar } from 'primereact/menubar';
-// import "primereact/resources/themes/lara-dark-blue/theme.css";
-// import "primeicons/primeicons.css";
 
 import { About } from './pages/About';
 import { Learn } from './pages/Learn';
 
+import { UserProvider } from './UserContext.jsx';
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<PrimaryLayout />}>
-        <Route index element={<Hello />} />
-        <Route path="learn" element={<Learn />} />
-        <Route path="about" element={<About />} />
-      </Route>
-    </Routes>
+    <UserProvider>
+      <Routes>
+        <Route path="/" element={<PrimaryLayout />}>
+          <Route index element={<Hello />} />
+          <Route path="learn" element={<Learn />} />
+          <Route path="about" element={<About />} />
+        </Route>
+      </Routes>
+    </UserProvider>
   )
 }
 
