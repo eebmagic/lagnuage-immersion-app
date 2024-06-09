@@ -11,8 +11,28 @@ Ingests your provided media into a vocab set and then uses spaced repetition met
 
 ## Usage
 
-### Ingestion
-Run `processDocs.py` to build all the translations for all snippets in the docs.
+### 1. Ingestion
+Import media to the `language-app/ingestion/media/` directory.
+Then manually add info to the `language-app/ingestion/media/metadata.json`.
+
+Run `language-app/ingestion/processDocs.py` to process and ingest all the docs in the `metadata.json` file.
+
+### 2. Server
+Install the requirements and run the `language-app/server/server.py` flask script.
+
+
+### 3. Frontend
+Build or run in dev with the npm scripts in the `language-app/frontend/` npm project:
+
+**Build the project:**
+```shell
+npm run build
+```
+
+**Run the project in dev mode:**
+```shell
+npm run dev
+```
 
 
 ## TODO
