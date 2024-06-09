@@ -4,13 +4,27 @@ import pymongo
 import random
 import json
 from bson import json_util
+from bson.objectid import ObjectId
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 client = pymongo.MongoClient('mongodb://localhost:27017/')
 vocab = client['language']['vocab']
 snippets = client['language']['snippets']
+USER_SETTINGS_COLLECTION = client['language']['user_settings']
+
+DEFAULT_USER_SETTINGS = {
+    "repetition_constants": {
+        "S": 2670,
+        "curve_shapes": {
+            "again": 1,
+            "hard": 2,
+            "good": 4,
+            "easy": 6,
+        }
+    },
+}
 
 def getBestVocab(N=20, num_parents=2):
     '''
@@ -30,7 +44,6 @@ def getBestVocab(N=20, num_parents=2):
         random.shuffle(parents)
 
         goodParentIDs.extend(parents[:num_parents])
-    
 
     print(f"Finding snippets for {len(goodParentIDs)} parent IDs")
     goodSnippets = list(snippets.find({'id': {'$in': goodParentIDs}}, {'_id': 0}))
@@ -40,6 +53,28 @@ def getBestVocab(N=20, num_parents=2):
         'snippets': goodSnippets
     }
 
+def updateMatchingPaths(src, target, path=None):
+    if path is None:
+        path = []
+
+    for key, value in src.items():
+        currPath = path + [key]
+        if key in target:
+            if isinstance(value, dict) and isinstance(target[key], dict):
+                updateMatchingPaths(value, target[key], path=currPath)
+            else:
+                if type(value) == type(target[key]):
+                    target[key] = value
+        else:
+            if isinstance(value, dict):
+                if key not in target:
+                    target[key] = {}
+                updateMatchingPaths(value, target[key], path=currPath)
+
+
+### API ROUTES ###
+
+# Snippet endpoints
 
 @app.route('/snippets', methods=['GET'])
 @cross_origin()
@@ -49,10 +84,14 @@ def getSnippets():
         num_parents = int(request.args.get('num_parents', 2))
 
         if (N < 0) or (num_parents < 0):
-            return jsonify({'error': 'Negative number args are not allowed.'}), 400
+            return jsonify(
+                {'error': 'Negative number args are not allowed.'},
+            ), 400
 
         print(f"Got request for {N} snippets ({num_parents} parents each)")
-        return jsonify(getBestVocab(N=N, num_parents=num_parents))
+        return jsonify(
+            getBestVocab(N=N, num_parents=num_parents),
+        ), 200
 
 @app.route('/next_media_snippet', methods=['GET'])
 @cross_origin()
@@ -85,7 +124,110 @@ def getNextSnippet():
 
         processedNext = json.loads(json_util.dumps(nextSnippetDoc))
 
-        return jsonify(processedNext)
+        return jsonify(processedNext), 200
+
+
+# User API endpoints
+
+@app.route('/user', methods=['GET'])
+@cross_origin()
+def getUser():
+    userId = request.args.get('id')
+    userName = request.args.get('username')
+    if not userId and not userName:
+        return jsonify({'error': 'No username or id provided.'}), 400
+
+    # Build query by username or user id
+    if userId:
+        try:
+            userBsonId = ObjectId(userId)
+            query = {'_id': userBsonId}
+        except:
+            return jsonify({
+                'error': 'Invalid user id provided. Must be a valid monog ObjectId format.'
+            }), 400
+    elif userName:
+        query = {'username': userName}
+
+    # Query for user doc
+    try:
+        userDoc = USER_SETTINGS_COLLECTION.find_one(query)
+    except:
+        return jsonify({
+            'error': f'Error querying for user document with id: {userId}'
+        }), 500
+
+    if not userDoc:
+        return jsonify({'error': f'No user found with id: {userId}'}), 404
+
+    # Return result
+    return jsonify(
+        json.loads(json_util.dumps(userDoc)),
+    ), 200
+
+@app.route('/user', methods=['PUT'])
+@cross_origin()
+def updateUser():
+    userId = request.args.get('id')
+    if not userId:
+        return jsonify({'error': 'No user id provided.'}), 400
+
+    try:
+        userBsonId = ObjectId(userId)
+    except:
+        return jsonify({
+            'error': 'Invalid user id provided. Must be a valid monog ObjectId format.'
+        }), 400
+
+    try:
+        userDoc = USER_SETTINGS_COLLECTION.find_one({'_id': userBsonId})
+    except:
+        return jsonify({
+            'error': f'Error querying for user document with id: {userId}'
+        }), 500
+
+    if not userDoc:
+        return jsonify({'error': f'No user found with id: {userId}'}), 404
+
+    # Get updated params from request body
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided.'}), 400
+    print(f'found body data: {data}')
+    print(dir(request))
+
+    # Recursively walk the request body and update if the old doc has a matching key
+    updateMatchingPaths(data, userDoc)
+
+    # Update the user document
+    result = USER_SETTINGS_COLLECTION.update_one({'_id': userBsonId}, {'$set': userDoc}).raw_result
+
+    return jsonify({
+        'result': result,
+    }), 200
+
+@app.route('/user', methods=['POST'])
+@cross_origin()
+def postUser():
+    username = request.args.get('username')
+    if not username:
+        return jsonify({'error': 'No username provided. (required query param)'}), 400
+
+    # Check that username isn't taken
+    existingUser = USER_SETTINGS_COLLECTION.find_one({'username': username})
+    if existingUser:
+        return jsonify({'error': f'Username already taken: {username}'}), 400
+
+    # Create new user
+    newUser = DEFAULT_USER_SETTINGS
+    newUser['username'] = username
+
+    # Insert new user
+    result = USER_SETTINGS_COLLECTION.insert_one(newUser)
+
+    return jsonify({
+        'id': str(result.inserted_id),
+    }), 200
 
 
 if __name__ == '__main__':
