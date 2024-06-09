@@ -197,10 +197,9 @@ class MongoInterface(BaseInterface):
                     'word_freq': sample['word_freq'],
                     'rep_data': {
                         'last_review': None,
-                        'next_review': str((datetime.now() + timedelta(days=1)).replace(minute=0, second=0, microsecond=0)),
-                        'current_interval': 1,
-                        'ease': 2.5,
-                        'quality': -1,
+                        'last_strength': None,
+                        'average_strength': 1,
+                        'history_length': 0,
                         'history': [],
                     },
                     'tags': [],
