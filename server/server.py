@@ -10,8 +10,8 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 client = pymongo.MongoClient('mongodb://localhost:27017/')
-vocab = client['language']['vocab']
-snippets = client['language']['snippets']
+VOCAB_COLLECTION = client['language']['vocab']
+SNIPPETS_COLLECTION = client['language']['snippets']
 USER_SETTINGS_COLLECTION = client['language']['user_settings']
 
 DEFAULT_USER_SETTINGS = {
@@ -31,7 +31,7 @@ def getBestVocab(N=20, num_parents=2):
     Gets the N best vocab words (common words that need practicing).
     '''
     goodVocab = list(
-        vocab.find({}, {'_id': 0}).sort([
+        VOCAB_COLLECTION.find({}, {'_id': 0}).sort([
             ('rep_data.next_review', 1),
             ('word_freq', -1)
         ])
@@ -46,7 +46,7 @@ def getBestVocab(N=20, num_parents=2):
         goodParentIDs.extend(parents[:num_parents])
 
     print(f"Finding snippets for {len(goodParentIDs)} parent IDs")
-    goodSnippets = list(snippets.find({'id': {'$in': goodParentIDs}}, {'_id': 0}))
+    goodSnippets = list(SNIPPETS_COLLECTION.find({'id': {'$in': goodParentIDs}}, {'_id': 0}))
 
     return {
         'vocab': goodVocab,
@@ -106,14 +106,14 @@ def getNextSnippet():
         currentSnippetId = request.args.get('id')
 
         # Query db for the current snippet
-        currentSnippet = snippets.find_one({'id': currentSnippetId})
+        currentSnippet = SNIPPETS_COLLECTION.find_one({'id': currentSnippetId})
         processed = json.loads(json_util.dumps(currentSnippet))
 
         # Get the next snippet
         currentMediaIndex = processed['media_index']
         currentMediaPath = processed['source_path']
 
-        nextSnippetDoc = snippets.find_one({
+        nextSnippetDoc = SNIPPETS_COLLECTION.find_one({
             'media_index': currentMediaIndex + 1,
             'source_path': currentMediaPath
         })
@@ -129,11 +129,7 @@ def getNextSnippet():
 
 # User API endpoints
 
-@app.route('/user', methods=['GET'])
-@cross_origin()
-def getUser():
-    userId = request.args.get('id')
-    userName = request.args.get('username')
+def getUserDoc(userName=None, userId=None):
     if not userId and not userName:
         return jsonify({'error': 'No username or id provided.'}), 400
 
@@ -164,6 +160,14 @@ def getUser():
     return jsonify(
         json.loads(json_util.dumps(userDoc)),
     ), 200
+
+@app.route('/user', methods=['GET'])
+@cross_origin()
+def getUser():
+    userId = request.args.get('id')
+    userName = request.args.get('username')
+
+    return getUserDoc(userName=userName, userId=userId)
 
 @app.route('/user', methods=['PUT'])
 @cross_origin()
@@ -228,6 +232,108 @@ def postUser():
     return jsonify({
         'id': str(result.inserted_id),
     }), 200
+
+
+# Spaced rep data endpoints
+
+def updateVocabItem(vocabId, strength, reviewTime, userDiffs):
+    vocabDoc = VOCAB_COLLECTION.find_one({'id': vocabId})
+
+    if not vocabDoc:
+        return False
+
+    # Update the vocab item
+    repData = vocabDoc['rep_data']
+    newData = repData.copy()
+    strengthValue = userDiffs[strength]
+    if repData['history_length'] == 0:
+        # First exposure. Set everything to defaults.
+        newData['last_review'] = reviewTime
+        newData['last_strength'] = strength
+        newData['average_strength'] = strengthValue
+        newData['history_length'] = 1
+        newData['history'] = [
+            {
+                'strength': strength,
+                'time': reviewTime,
+            }
+        ]
+    else:
+        # Compute new values
+        newData['last_review'] = reviewTime
+        newData['last_strength'] = strength
+        newData['average_strength'] = (
+            (repData['average_strength'] * repData['history_length']) + strengthValue
+        ) / (repData['history_length'] + 1)
+        newData['history_length'] += 1
+        newData['history'].append({
+            'strength': strength,
+            'time': reviewTime,
+        })
+
+    # Update the doc
+    result = VOCAB_COLLECTION.update_one({'id': vocabId}, {'$set': {'rep_data': newData}})
+
+    return result.modified_count == 1
+
+@app.route('/rep', methods=['POST'])
+@cross_origin()
+def logVocabLearning():
+    username = request.args.get('username')
+    if not username:
+        return jsonify({'error': 'No username provided. (required query param)'}), 400
+
+    userSettings = USER_SETTINGS_COLLECTION.find_one({'username': username})
+    if not userSettings:
+        return jsonify({'error': f'Cannot update vocab. No user found with username: {username}'}), 404
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided.'}), 400
+
+    # Get difficulty for user
+    userSettings = USER_SETTINGS_COLLECTION.find_one({'username': username})
+    print(f'Found user settings doc: {userSettings}')
+
+    userDiffs = userSettings['repetition_constants']['curve_shapes']
+
+    print(f'found body data: {json.dumps(data, indent=2)}');
+    failed = set()
+    for vId in data['vocab']:
+        updateResult = updateVocabItem(
+            vId,
+            strength=data['strength'],
+            reviewTime=data['review_time'],
+            userDiffs=userDiffs,
+        )
+        if not updateResult:
+            failed.add(vId)
+
+    # full success
+    if len(failed) == 0:
+        return jsonify({'success': True}), 200
+
+    # full failure
+    if len(failed) == len(data['vocab']):
+        return jsonify({'error': 'Failed to update any vocab items.'}), 422
+
+    # partial success
+    fullResultsMessages = []
+    for vId in data['vocab']:
+        if vId in failed:
+            fullResultsMessages.append({
+                'id': vId,
+                'status': 422,
+                'message': 'Failed to update vocab item',
+            })
+        else:
+            fullResultsMessages.append({
+                'id': vId,
+                'status': 200,
+                'message': 'Successfully updated vocab item',
+            })
+
+    return jsonify(results=fullResultsMessages), 207
 
 
 if __name__ == '__main__':
