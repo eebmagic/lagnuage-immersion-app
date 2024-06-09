@@ -1,6 +1,9 @@
 import { Card } from 'primereact/card';
 import { Accordion, AccordionTab } from 'primereact/accordion';
 
+// import "primereact/resources/themes/lara-dark-blue/theme.css";
+// import "primeicons/primeicons.css";
+
 export function Snippet({ snippet, index }) {
   return (
     <div key={index}>
@@ -8,7 +11,7 @@ export function Snippet({ snippet, index }) {
         <p>{snippet.text}</p>
         <Accordion>
           <AccordionTab header="Translation">
-            <p>{snippet.trans}</p>
+            <p>{snippet.translation}</p>
           </AccordionTab>
         </Accordion>
       </Card>
