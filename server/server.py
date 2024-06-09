@@ -276,7 +276,7 @@ def updateVocabItem(vocabId, strength, reviewTime, userDiffs):
 
     return result.modified_count == 1
 
-@app.route('/log', methods=['POST'])
+@app.route('/rep', methods=['POST'])
 @cross_origin()
 def logVocabLearning():
     username = request.args.get('username')
