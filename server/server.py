@@ -133,18 +133,25 @@ def getNextSnippet():
 @cross_origin()
 def getUser():
     userId = request.args.get('id')
-    if not userId:
-        return jsonify({'error': 'No user id provided.'}), 400
+    userName = request.args.get('username')
+    if not userId and not userName:
+        return jsonify({'error': 'No username or id provided.'}), 400
 
-    try:
-        userBsonId = ObjectId(userId)
-    except:
-        return jsonify({
-            'error': 'Invalid user id provided. Must be a valid monog ObjectId format.'
-        }), 400
+    # Build query by username or user id
+    if userId:
+        try:
+            userBsonId = ObjectId(userId)
+            query = {'_id': userBsonId}
+        except:
+            return jsonify({
+                'error': 'Invalid user id provided. Must be a valid monog ObjectId format.'
+            }), 400
+    elif userName:
+        query = {'username': userName}
 
+    # Query for user doc
     try:
-        userDoc = USER_SETTINGS_COLLECTION.find_one({'_id': userBsonId})
+        userDoc = USER_SETTINGS_COLLECTION.find_one(query)
     except:
         return jsonify({
             'error': f'Error querying for user document with id: {userId}'
@@ -153,6 +160,7 @@ def getUser():
     if not userDoc:
         return jsonify({'error': f'No user found with id: {userId}'}), 404
 
+    # Return result
     return jsonify(
         json.loads(json_util.dumps(userDoc)),
     ), 200
