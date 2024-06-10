@@ -5,6 +5,9 @@ import random
 import json
 from bson import json_util
 from bson.objectid import ObjectId
+import time
+import heapq
+import math
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -70,6 +73,9 @@ def updateMatchingPaths(src, target, path=None):
                 if key not in target:
                     target[key] = {}
                 updateMatchingPaths(value, target[key], path=currPath)
+
+def repDataCurveEquation(timeDelta, S, alpha):
+    return math.e ** (-timeDelta / (alpha * S))
 
 
 ### API ROUTES ###
@@ -309,15 +315,15 @@ def logVocabLearning():
         if not updateResult:
             failed.add(vId)
 
-    # full success
+    # Full success
     if len(failed) == 0:
         return jsonify({'success': True}), 200
 
-    # full failure
+    # Full failure
     if len(failed) == len(data['vocab']):
         return jsonify({'error': 'Failed to update any vocab items.'}), 422
 
-    # partial success
+    # Partial success
     fullResultsMessages = []
     for vId in data['vocab']:
         if vId in failed:
@@ -335,6 +341,89 @@ def logVocabLearning():
 
     return jsonify(results=fullResultsMessages), 207
 
+@app.route('/rep', methods=['GET'])
+@cross_origin()
+def getRepItems():
+    DEFAULT_N = 10
+    username = request.args.get('username')
+    if not username:
+        return jsonify({'error': 'No username provided. (required query param)'}), 400
+
+    rankTypes = ['recent', 'average']
+    rankType = request.args.get('rank_type', 'recent')
+    if rankType not in rankTypes:
+        return jsonify({'error': f'Invalid rank type. Must be one of: {rankTypes} (defaults to recent)'}), 400
+
+    try:
+        N = int(request.args.get('N', DEFAULT_N))
+    except:
+        return jsonify({'error': 'Invalid N provided. Must be an integer.'}), 400
+
+    currTime = time.time()
+
+    userSettings = USER_SETTINGS_COLLECTION.find_one({'username': username})
+    if not userSettings:
+        return jsonify({'error': f'Cannot get vocab. No user found with username: {username}'}), 404
+
+    userS = userSettings['repetition_constants']['S']
+    userDiffs = userSettings['repetition_constants']['curve_shapes']
+
+    # Get all the seen vocab items
+    query = {
+        'rep_data.last_review': {'$ne': None}
+    }
+    documents = VOCAB_COLLECTION.find(query)
+    # count = VOCAB_COLLECTION.count_documents(query)
+
+    # Compute the rank values
+    heap = []
+    for doc in documents:
+        repData = doc['rep_data']
+        timeDelta = currTime - repData['last_review']
+
+        if rankType == 'recent':
+            lastStrength = repData['last_strength']
+            alpha = userDiffs[lastStrength]
+            rankValue = repDataCurveEquation(timeDelta, userS, alpha)
+        elif rankType == 'average':
+            historyValues = [userDiffs[item['strength']] for item in repData['history']]
+            avgAlpha = sum(historyValues) / len(historyValues)
+            rankValue = repDataCurveEquation(timeDelta, userS, avgAlpha)
+
+        item = doc['id']
+        if len(heap) < N:
+            heapq.heappush(heap, (-rankValue, item))
+        else:
+            heapq.heappushpop(heap, (-rankValue, item))
+
+    try:
+        # Choose a random parent for each vocab item
+        snippetSet = set()
+        for (rank, vId) in heap:
+            vocabDoc = VOCAB_COLLECTION.find_one({'id': vId})
+            parents = vocabDoc['parents']
+            random.shuffle(parents)
+            while parents and parents[0] in snippetSet:
+                parents.pop(0)
+            if parents:
+                snippetSet.add(parents[0])
+
+        # Get the snippets
+        snippets = list(SNIPPETS_COLLECTION.find(
+            { 'id': {'$in': list(snippetSet)} },
+            { '_id': 0 }
+        ))
+
+        return jsonify({
+            'status': 'success',
+            'vocab': heap,
+            'snippets': snippets,
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'error': f'Failed to get snippets.',
+            'exception': str(e),
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
