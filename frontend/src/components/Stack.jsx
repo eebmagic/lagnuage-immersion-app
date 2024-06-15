@@ -87,6 +87,12 @@ export function Stack({ snippets }) {
                   />
                 ))}
               </div>
+              <div className='card flex flex-wrap justify-content-center gap-3'>
+                <Button label='Again' severity='danger' />
+                <Button label='Hard' severity='warning' />
+                <Button label='Good' style={{ backgroundColor: '#8c9234', borderColor: '#8c9234', color: 'white' }} />
+                <Button label='Easy' severity='success' />
+              </div>
             </div>
           ) : (
             <div>
