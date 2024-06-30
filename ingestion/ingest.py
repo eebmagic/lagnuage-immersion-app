@@ -12,15 +12,15 @@ from CONFIG import PreferredInterface as Interface
 
 WORD_FREQ_FILTER_THRESHOLD = 7.0
 
+def realWord(text):
+    # Check that a string isn't just punctuation
+    return re.match(r'[^\w\s]', text) == None
+
 
 def lemmatize(text, parentSnippet=None):
     '''
     Default lemmatize function, using spacy.
     '''
-    def realWord(text):
-        # Check that a string isn't just punctuation
-        return re.match(r'[^\w\s]', text) == None
-
     doc = nlp(text)
     result = {}
     seenLemmas = set()
@@ -58,10 +58,11 @@ def lemmatize(text, parentSnippet=None):
 
     texts = []
     for word in doc:
-        texts.append({
-            'text': word.text,
-            'vocab': f"{word.lemma_} - {word.pos_}"
-        })
+        if realWord(word.text):
+            texts.append({
+                'text': word.text,
+                'vocab': f"{word.lemma_} - {word.pos_}"
+            })
     return result, texts
 
 
