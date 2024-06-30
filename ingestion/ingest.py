@@ -56,7 +56,13 @@ def lemmatize(text, parentSnippet=None):
 
             result[specificID] = m
 
-    return result
+    texts = []
+    for word in doc:
+        texts.append({
+            'text': word.text,
+            'vocab': f"{word.lemma_} - {word.pos_}"
+        })
+    return result, texts
 
 
 def prepChunk(items, chunkString=''):
@@ -71,8 +77,10 @@ def prepChunk(items, chunkString=''):
         sampleItemResults = {}
         lemmaSets = []
         vocabSets = []
+        textArrs = []
         for sent, idx in zip(sents, ids):
-            lresult = lemmatize(sent, parentSnippet=idx)
+            lresult, texts = lemmatize(sent, parentSnippet=idx)
+            textArrs.append(texts)
             sampleItemResults.update(lresult)
             lemmaSets.append(list(lresult.keys()))
             vocabSets.append(list(item['vocab_id'] for item in lresult.values()))
@@ -85,9 +93,9 @@ def prepChunk(items, chunkString=''):
         print(f"Skipping chunk")
         raise e
 
-
     snippetResults = {}
-    for item, translation, lemmaIds, vocabIds in zip(items, translations, lemmaSets, vocabSets):
+    for included in zip(items, translations, lemmaSets, vocabSets, textArrs):
+        (item, translation, lemmaIds, vocabIds, textArr) = included
         out = item.copy()
         out['translation'] = translation
         out['translation_model'] = Translator.metaName
@@ -96,6 +104,7 @@ def prepChunk(items, chunkString=''):
 
         out['contained_samples'] = lemmaIds
         out['contained_vocab'] = vocabIds
+        out['texts'] = textArr
         snippetResults[out['id']] = out
 
     return snippetResults, sampleItemResults
