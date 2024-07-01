@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from 'primereact/button';
 
-import { Stack } from "../components/Stack";
+import Stack from "../components/Stack";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const GET_SNIPPETS_API_PATH = `http://${API_URL}/snippets?N=3`;

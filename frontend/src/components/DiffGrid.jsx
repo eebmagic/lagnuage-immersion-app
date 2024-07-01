@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Checkbox } from 'primereact/checkbox';
 import { Button } from 'primereact/button';
 
-import { buttonOptions } from './Snippet';
+import buttonOptions from './ButtonOptions';
 
-export function DiffGrid({ snippet, updateFunc }) {
+export default function DiffGrid({ snippet, updateFunc }) {
   const difficulties = ['Easy', 'Good', 'Hard', 'Again'];
 
   const startingState = snippet.texts.map((item) => ({
@@ -19,14 +19,12 @@ export function DiffGrid({ snippet, updateFunc }) {
   const [checkedState, setCheckedState] = useState(startingState);
 
   const toggleRow = (difficulty) => {
-    const newCheckedState = checkedState.map(() => {
-      return {
-        Easy: difficulty === 'Easy',
-        Good: difficulty === 'Good',
-        Hard: difficulty === 'Hard',
-        Again: difficulty === 'Again'
-      }
-    });
+    const newCheckedState = checkedState.map(() => ({
+      Easy: difficulty === 'Easy',
+      Good: difficulty === 'Good',
+      Hard: difficulty === 'Hard',
+      Again: difficulty === 'Again',
+    }));
     setCheckedState(newCheckedState);
   };
 
@@ -36,57 +34,58 @@ export function DiffGrid({ snippet, updateFunc }) {
       Easy: difficulty === 'Easy',
       Good: difficulty === 'Good',
       Hard: difficulty === 'Hard',
-      Again: difficulty === 'Again'
-    }
+      Again: difficulty === 'Again',
+    };
     setCheckedState(newCheckedState);
   };
 
-  const createRowData = () => {
-    return difficulties.map((difficulty, diffIndex) => {
-      const options = buttonOptions[difficulty];
-      const rowData = {
-        toggle: (
-          <Button
-            key={`button: ${difficulty}`}
-            label={difficulty}
-            severity={options.severity}
-            style={options.color ? { backgroundColor: options.color, borderColor: options.color, color: 'white' } : {}}
-            onClick={() => toggleRow(difficulty, !checkedState[diffIndex][difficulty])}
-          />
-        ),
-      };
-      snippet.texts.forEach((word, wordIndex) => {
-        rowData[word.text] = (
-          <Checkbox
-            inputId={`${word.text}-${difficulty}`}
-            checked={checkedState[wordIndex][difficulty]}
-            onChange={() => handleCheckboxChange(wordIndex, difficulty)}
-            key={`${word.text}-${difficulty}`}
-          />
-        );
-      });
-      return rowData;
+  const createRowData = () => difficulties.map((difficulty, diffIndex) => {
+    const options = buttonOptions[difficulty];
+    const rowData = {
+      toggle: (
+        <Button
+          key={`button: ${difficulty}`}
+          label={difficulty}
+          severity={options.severity}
+          style={options.color ? { backgroundColor: options.color, borderColor: options.color, color: 'white' } : {}}
+          onClick={() => toggleRow(difficulty, !checkedState[diffIndex][difficulty])}
+        />
+      ),
+    };
+    snippet.texts.forEach((word, wordIndex) => {
+      rowData[word.text] = (
+        <Checkbox
+          inputId={`${word.text}-${difficulty}`}
+          checked={checkedState[wordIndex][difficulty]}
+          onChange={() => handleCheckboxChange(wordIndex, difficulty)}
+          key={`${word.text}-${difficulty}`}
+        />
+      );
     });
-  };
+    return rowData;
+  });
 
   const truncate = (text, length) => {
     if (text.length > length) {
-      return text.substring(0, length) + '..';
-    } else {
-      return `${text}${' '.repeat(length - text.length)}`;
+      return `${text.substring(0, length)}..`;
     }
+    return `${text}${' '.repeat(length - text.length)}`;
   };
 
   const columns = [
-    { field: 'toggle', header: 'Set Row' },
-    ...snippet.texts.map(word => ({ field: word.text, header: truncate(word.text, 4) }))
+    { field: 'toggle', header: 'Set Row', id: 'buttons' },
+    ...snippet.texts.map((word, i) => ({
+      field: word.text,
+      header: truncate(word.text, 4),
+      id: i,
+    })),
   ];
 
   const sendUpdates = () => {
-    const groupings = {}
-    snippet.texts.map((item, itemIndex) => {
+    const groupings = {};
+    snippet.texts.forEach((item, itemIndex) => {
       const attribute = Object.keys(checkedState[itemIndex])
-        .filter(key => checkedState[itemIndex][key] === true)[0];
+        .filter((key) => checkedState[itemIndex][key] === true)[0];
       if (attribute === undefined) {
         return;
       }
@@ -106,13 +105,13 @@ export function DiffGrid({ snippet, updateFunc }) {
   };
 
   return (
-    <div className='flex flex-column gap-2'>
+    <div className="flex flex-column gap-2">
       <div>
         <Button
-          label='Next'
-          icon='pi pi-arrow-right'
-          iconPos='right'
-          severity='info'
+          label="Next"
+          icon="pi pi-arrow-right"
+          iconPos="right"
+          severity="info"
           onClick={sendUpdates}
         />
       </div>
@@ -121,8 +120,8 @@ export function DiffGrid({ snippet, updateFunc }) {
         className="p-datatable-gridlines"
         tooltip="Word Difficulty"
       >
-        {columns.map((col, index) => (
-          <Column key={index} field={col.field} header={col.header} />
+        {columns.map((col) => (
+          <Column key={col.id} field={col.field} header={col.header} />
         ))}
       </DataTable>
     </div>
