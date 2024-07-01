@@ -33,17 +33,18 @@ export function Learn() {
 
   return (
     <div>
+      <h1>Learn</h1>
       <Button
         label='REFRESH'
         onClick={updateFunc}
         severity='success'
         icon='pi pi-refresh'
       />
-      <h1>Learn</h1>
       {
         (snippets.length > 0) ? (
           <div>
-            <p>{vocab.map(x => x.lemma)}</p>
+            <h2> Learning these vocab items: </h2>
+            <p><bold>{vocab.map((x) => x.lemma)}</bold></p>
             <Stack snippets={snippets} />
           </div>
         ) : (

@@ -43,10 +43,8 @@ function PrimaryLayout() {
     }
   ];
   return (
-    <div>
+    <div className="flex flex-column gap-4">
       <Menubar model={items} />
-      <h1>Layout</h1>
-
       <Outlet />
     </div>
   )

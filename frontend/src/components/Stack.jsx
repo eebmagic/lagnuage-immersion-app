@@ -9,7 +9,6 @@ export default function Stack({ snippets }) {
 
   return (
     <div>
-      <h2>Learn this snippet</h2>
       <div className="card flex flex-column gap-2">
         {(snippets.length > 0) && (index < snippets.length) ? (
           <div className="flex flex-column gap-2">
