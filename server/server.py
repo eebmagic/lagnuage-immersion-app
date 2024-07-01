@@ -5,6 +5,9 @@ import random
 import json
 from bson import json_util
 from bson.objectid import ObjectId
+import time
+import heapq
+import math
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -70,6 +73,9 @@ def updateMatchingPaths(src, target, path=None):
                 if key not in target:
                     target[key] = {}
                 updateMatchingPaths(value, target[key], path=currPath)
+
+def repDataCurveEquation(timeDelta, S, alpha):
+    return math.e ** (-timeDelta / (alpha * S))
 
 
 ### API ROUTES ###
@@ -237,44 +243,50 @@ def postUser():
 # Spaced rep data endpoints
 
 def updateVocabItem(vocabId, strength, reviewTime, userDiffs):
-    vocabDoc = VOCAB_COLLECTION.find_one({'id': vocabId})
+    try:
+        vocabDoc = VOCAB_COLLECTION.find_one({'id': vocabId})
 
-    if not vocabDoc:
-        return False
+        if not vocabDoc:
+            return 204
 
-    # Update the vocab item
-    repData = vocabDoc['rep_data']
-    newData = repData.copy()
-    strengthValue = userDiffs[strength]
-    if repData['history_length'] == 0:
-        # First exposure. Set everything to defaults.
-        newData['last_review'] = reviewTime
-        newData['last_strength'] = strength
-        newData['average_strength'] = strengthValue
-        newData['history_length'] = 1
-        newData['history'] = [
-            {
+        # Update the vocab item
+        repData = vocabDoc['rep_data']
+        newData = repData.copy()
+        strengthValue = userDiffs[strength]
+        if repData['history_length'] == 0:
+            # First exposure. Set everything to defaults.
+            newData['last_review'] = reviewTime
+            newData['last_strength'] = strength
+            newData['average_strength'] = strengthValue
+            newData['history_length'] = 1
+            newData['history'] = [
+                {
+                    'strength': strength,
+                    'time': reviewTime,
+                }
+            ]
+        else:
+            # Compute new values
+            newData['last_review'] = reviewTime
+            newData['last_strength'] = strength
+            newData['average_strength'] = (
+                (repData['average_strength'] * repData['history_length']) + strengthValue
+            ) / (repData['history_length'] + 1)
+            newData['history_length'] += 1
+            newData['history'].append({
                 'strength': strength,
                 'time': reviewTime,
-            }
-        ]
-    else:
-        # Compute new values
-        newData['last_review'] = reviewTime
-        newData['last_strength'] = strength
-        newData['average_strength'] = (
-            (repData['average_strength'] * repData['history_length']) + strengthValue
-        ) / (repData['history_length'] + 1)
-        newData['history_length'] += 1
-        newData['history'].append({
-            'strength': strength,
-            'time': reviewTime,
-        })
+            })
 
-    # Update the doc
-    result = VOCAB_COLLECTION.update_one({'id': vocabId}, {'$set': {'rep_data': newData}})
+        # Update the doc
+        result = VOCAB_COLLECTION.update_one({'id': vocabId}, {'$set': {'rep_data': newData}})
 
-    return result.modified_count == 1
+        # return result.modified_count == 1
+        return 200
+    except Exception as e:
+        print(f'Error updating vocab item: {vocabId}')
+        print(e)
+        return 422
 
 @app.route('/rep', methods=['POST'])
 @cross_origin()
@@ -298,7 +310,8 @@ def logVocabLearning():
     userDiffs = userSettings['repetition_constants']['curve_shapes']
 
     print(f'found body data: {json.dumps(data, indent=2)}');
-    failed = set()
+    codes = set()
+    updateStatuses = []
     for vId in data['vocab']:
         updateResult = updateVocabItem(
             vId,
@@ -306,35 +319,125 @@ def logVocabLearning():
             reviewTime=data['review_time'],
             userDiffs=userDiffs,
         )
-        if not updateResult:
-            failed.add(vId)
+        message = ''
+        if updateResult == 200:
+            message = 'Successfully updated vocab item'
+        elif updateResult == 204:
+            message = 'Vocab item not found in db'
+        elif updateResult == 422:
+            message = 'Failed to update vocab item'
+        response = {
+            'id': vId,
+            'status': updateResult,
+            'message': message,
+            'strength': data['strength'],
+        }
+        updateStatuses.append(response)
+        codes.add(updateResult)
 
-    # full success
-    if len(failed) == 0:
-        return jsonify({'success': True}), 200
+    # Full success/fail/missing
+    if len(codes) == 1:
+        if 200 in codes:
+            return jsonify({'success': True}), 200
+        elif 204 in codes:
+            return jsonify({
+                'success': True,
+                'message': 'All provoided vocab items were not in the db\'s vocab set',
+            }), 204
+        elif 422 in codes:
+            return jsonify({'error': 'Failed to update any vocab items.'}), 422
 
-    # full failure
-    if len(failed) == len(data['vocab']):
-        return jsonify({'error': 'Failed to update any vocab items.'}), 422
+    # Mixed results
+    mixedResponse = {
+        'codes': list(codes),
+        'results': updateStatuses,
+        'strength': data['strength'],
+    }
+    return jsonify(mixedResponse), 207
 
-    # partial success
-    fullResultsMessages = []
-    for vId in data['vocab']:
-        if vId in failed:
-            fullResultsMessages.append({
-                'id': vId,
-                'status': 422,
-                'message': 'Failed to update vocab item',
-            })
+@app.route('/rep', methods=['GET'])
+@cross_origin()
+def getRepItems():
+    DEFAULT_N = 10
+    username = request.args.get('username')
+    if not username:
+        return jsonify({'error': 'No username provided. (required query param)'}), 400
+
+    rankTypes = ['recent', 'average']
+    rankType = request.args.get('rank_type', 'recent')
+    if rankType not in rankTypes:
+        return jsonify({'error': f'Invalid rank type. Must be one of: {rankTypes} (defaults to recent)'}), 400
+
+    try:
+        N = int(request.args.get('N', DEFAULT_N))
+    except:
+        return jsonify({'error': 'Invalid N provided. Must be an integer.'}), 400
+
+    currTime = time.time()
+
+    userSettings = USER_SETTINGS_COLLECTION.find_one({'username': username})
+    if not userSettings:
+        return jsonify({'error': f'Cannot get vocab. No user found with username: {username}'}), 404
+
+    userS = userSettings['repetition_constants']['S']
+    userDiffs = userSettings['repetition_constants']['curve_shapes']
+
+    # Get all the seen vocab items
+    query = {
+        'rep_data.last_review': {'$ne': None}
+    }
+    documents = VOCAB_COLLECTION.find(query)
+    # count = VOCAB_COLLECTION.count_documents(query)
+
+    # Compute the rank values
+    heap = []
+    for doc in documents:
+        repData = doc['rep_data']
+        timeDelta = currTime - repData['last_review']
+
+        if rankType == 'recent':
+            lastStrength = repData['last_strength']
+            alpha = userDiffs[lastStrength]
+            rankValue = repDataCurveEquation(timeDelta, userS, alpha)
+        elif rankType == 'average':
+            historyValues = [userDiffs[item['strength']] for item in repData['history']]
+            avgAlpha = sum(historyValues) / len(historyValues)
+            rankValue = repDataCurveEquation(timeDelta, userS, avgAlpha)
+
+        item = doc['id']
+        if len(heap) < N:
+            heapq.heappush(heap, (-rankValue, item))
         else:
-            fullResultsMessages.append({
-                'id': vId,
-                'status': 200,
-                'message': 'Successfully updated vocab item',
-            })
+            heapq.heappushpop(heap, (-rankValue, item))
 
-    return jsonify(results=fullResultsMessages), 207
+    try:
+        # Choose a random parent for each vocab item
+        snippetSet = set()
+        for (rank, vId) in heap:
+            vocabDoc = VOCAB_COLLECTION.find_one({'id': vId})
+            parents = vocabDoc['parents']
+            random.shuffle(parents)
+            while parents and parents[0] in snippetSet:
+                parents.pop(0)
+            if parents:
+                snippetSet.add(parents[0])
 
+        # Get the snippets
+        snippets = list(SNIPPETS_COLLECTION.find(
+            { 'id': {'$in': list(snippetSet)} },
+            { '_id': 0 }
+        ))
+
+        return jsonify({
+            'status': 'success',
+            'vocab': heap,
+            'snippets': snippets,
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'error': f'Failed to get snippets.',
+            'exception': str(e),
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
