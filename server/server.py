@@ -323,13 +323,14 @@ def logVocabLearning():
         if updateResult == 200:
             message = 'Successfully updated vocab item'
         elif updateResult == 204:
-            message = 'Failed to find vocab item'
+            message = 'Vocab item not found in db'
         elif updateResult == 422:
             message = 'Failed to update vocab item'
         response = {
             'id': vId,
             'status': updateResult,
             'message': message,
+            'strength': data['strength'],
         }
         updateStatuses.append(response)
         codes.add(updateResult)
@@ -339,12 +340,20 @@ def logVocabLearning():
         if 200 in codes:
             return jsonify({'success': True}), 200
         elif 204 in codes:
-            return jsonify({'error': 'All provoided vocab items were not in the db\'s vocab set'}), 204
+            return jsonify({
+                'success': True,
+                'message': 'All provoided vocab items were not in the db\'s vocab set',
+            }), 204
         elif 422 in codes:
             return jsonify({'error': 'Failed to update any vocab items.'}), 422
 
     # Mixed results
-    return jsonify(results=updateStatuses), 207
+    mixedResponse = {
+        'codes': list(codes),
+        'results': updateStatuses,
+        'strength': data['strength'],
+    }
+    return jsonify(mixedResponse), 207
 
 @app.route('/rep', methods=['GET'])
 @cross_origin()
