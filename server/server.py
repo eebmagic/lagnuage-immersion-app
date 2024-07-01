@@ -243,44 +243,50 @@ def postUser():
 # Spaced rep data endpoints
 
 def updateVocabItem(vocabId, strength, reviewTime, userDiffs):
-    vocabDoc = VOCAB_COLLECTION.find_one({'id': vocabId})
+    try:
+        vocabDoc = VOCAB_COLLECTION.find_one({'id': vocabId})
 
-    if not vocabDoc:
-        return False
+        if not vocabDoc:
+            return 204
 
-    # Update the vocab item
-    repData = vocabDoc['rep_data']
-    newData = repData.copy()
-    strengthValue = userDiffs[strength]
-    if repData['history_length'] == 0:
-        # First exposure. Set everything to defaults.
-        newData['last_review'] = reviewTime
-        newData['last_strength'] = strength
-        newData['average_strength'] = strengthValue
-        newData['history_length'] = 1
-        newData['history'] = [
-            {
+        # Update the vocab item
+        repData = vocabDoc['rep_data']
+        newData = repData.copy()
+        strengthValue = userDiffs[strength]
+        if repData['history_length'] == 0:
+            # First exposure. Set everything to defaults.
+            newData['last_review'] = reviewTime
+            newData['last_strength'] = strength
+            newData['average_strength'] = strengthValue
+            newData['history_length'] = 1
+            newData['history'] = [
+                {
+                    'strength': strength,
+                    'time': reviewTime,
+                }
+            ]
+        else:
+            # Compute new values
+            newData['last_review'] = reviewTime
+            newData['last_strength'] = strength
+            newData['average_strength'] = (
+                (repData['average_strength'] * repData['history_length']) + strengthValue
+            ) / (repData['history_length'] + 1)
+            newData['history_length'] += 1
+            newData['history'].append({
                 'strength': strength,
                 'time': reviewTime,
-            }
-        ]
-    else:
-        # Compute new values
-        newData['last_review'] = reviewTime
-        newData['last_strength'] = strength
-        newData['average_strength'] = (
-            (repData['average_strength'] * repData['history_length']) + strengthValue
-        ) / (repData['history_length'] + 1)
-        newData['history_length'] += 1
-        newData['history'].append({
-            'strength': strength,
-            'time': reviewTime,
-        })
+            })
 
-    # Update the doc
-    result = VOCAB_COLLECTION.update_one({'id': vocabId}, {'$set': {'rep_data': newData}})
+        # Update the doc
+        result = VOCAB_COLLECTION.update_one({'id': vocabId}, {'$set': {'rep_data': newData}})
 
-    return result.modified_count == 1
+        # return result.modified_count == 1
+        return 200
+    except Exception as e:
+        print(f'Error updating vocab item: {vocabId}')
+        print(e)
+        return 422
 
 @app.route('/rep', methods=['POST'])
 @cross_origin()
@@ -304,7 +310,8 @@ def logVocabLearning():
     userDiffs = userSettings['repetition_constants']['curve_shapes']
 
     print(f'found body data: {json.dumps(data, indent=2)}');
-    failed = set()
+    codes = set()
+    updateStatuses = []
     for vId in data['vocab']:
         updateResult = updateVocabItem(
             vId,
@@ -312,34 +319,32 @@ def logVocabLearning():
             reviewTime=data['review_time'],
             userDiffs=userDiffs,
         )
-        if not updateResult:
-            failed.add(vId)
+        message = ''
+        if updateResult == 200:
+            message = 'Successfully updated vocab item'
+        elif updateResult == 204:
+            message = 'Failed to find vocab item'
+        elif updateResult == 422:
+            message = 'Failed to update vocab item'
+        response = {
+            'id': vId,
+            'status': updateResult,
+            'message': message,
+        }
+        updateStatuses.append(response)
+        codes.add(updateResult)
 
-    # Full success
-    if len(failed) == 0:
-        return jsonify({'success': True}), 200
+    # Full success/fail/missing
+    if len(codes) == 1:
+        if 200 in codes:
+            return jsonify({'success': True}), 200
+        elif 204 in codes:
+            return jsonify({'error': 'All provoided vocab items were not in the db\'s vocab set'}), 204
+        elif 422 in codes:
+            return jsonify({'error': 'Failed to update any vocab items.'}), 422
 
-    # Full failure
-    if len(failed) == len(data['vocab']):
-        return jsonify({'error': 'Failed to update any vocab items.'}), 422
-
-    # Partial success
-    fullResultsMessages = []
-    for vId in data['vocab']:
-        if vId in failed:
-            fullResultsMessages.append({
-                'id': vId,
-                'status': 422,
-                'message': 'Failed to update vocab item',
-            })
-        else:
-            fullResultsMessages.append({
-                'id': vId,
-                'status': 200,
-                'message': 'Successfully updated vocab item',
-            })
-
-    return jsonify(results=fullResultsMessages), 207
+    # Mixed results
+    return jsonify(results=updateStatuses), 207
 
 @app.route('/rep', methods=['GET'])
 @cross_origin()
