@@ -15,12 +15,10 @@ export function Learn() {
     fetch(GET_SNIPPETS_API_PATH)
       .then((response) => response.json())
       .then(data => {
-        console.log(`Api call got response data:`);
-        console.log(data);
+        console.log('Api call got response data:', data);
         setSnippets(data.snippets);
         setVocab(data.vocab);
-        console.log(`SET VOCAB:`);
-        console.log(data.vocab)
+        console.log('SET VOCAB:', data.vocab);
       })
       .catch(error => {
         console.error('There was an error!', error);

@@ -44,11 +44,8 @@ export function Snippet({
       review_time: Date.now() / 1000,
       vocab: vocabList,
     }
-    // console.log(vocabList)
-    console.log(payload)
 
     const fullUrl = `${POST_REP_API_PATH}?username=${username}`
-    console.log(`Sending payload for difficulty ${difficulty}: incrementing: ${shouldIncrement}`);
     fetch(fullUrl, {
       method: 'POST',
       headers: {
@@ -73,7 +70,6 @@ export function Snippet({
             : false;
         }
         
-        console.log(response.status == 200, response.status == 204, all200);
         if (response.status == 200 || response.status == 204 || all200) {
           // Increment the index if a good response comes back
           if (shouldIncrement) {
