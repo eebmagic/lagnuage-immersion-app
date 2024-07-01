@@ -43,8 +43,14 @@ export function Learn() {
       {
         (snippets.length > 0) ? (
           <div>
-            <h2> Learning these vocab items: </h2>
-            <p><bold>{vocab.map((x) => x.lemma)}</bold></p>
+            <div className="flex flex-grid justify-content-center">
+              <h2> Learning these vocab items: </h2>
+              <div clasName="flex flex-grid justify-content-left" style={{ listStylePosition: 'outside', textAlign: 'left'}}>
+                <ul>
+                  {vocab.map((x) => <li key={x.lemma}>{x.lemma}</li>)}
+                </ul>
+              </div>
+            </div>
             <Stack snippets={snippets} />
           </div>
         ) : (
