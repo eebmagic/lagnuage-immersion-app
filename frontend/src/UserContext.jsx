@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 
 const UserContext = createContext(null);
 
@@ -8,13 +8,13 @@ const DEFAULT_STATE = {
   isLoggedIn: true,
 };
 
-export const UserProvider = ({ children }) => {
-    const [user, setUser] = useState(DEFAULT_STATE);
-    return (
-        <UserContext.Provider value={{ user, setUser }}>
-            {children}
-        </UserContext.Provider>
-    );
-};
+export function UserProvider({ children }) {
+  const [user, setUser] = useState(DEFAULT_STATE);
+  return (
+    <UserContext.Provider value={{ user, setUser }}>
+      {children}
+    </UserContext.Provider>
+  );
+}
 
 export const useUser = () => useContext(UserContext);
