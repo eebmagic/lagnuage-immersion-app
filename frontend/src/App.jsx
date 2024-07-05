@@ -4,7 +4,7 @@ import { Routes, Route, Outlet, Link, useNavigate } from 'react-router-dom';
 import { Menubar } from 'primereact/menubar';
 
 import { About } from './pages/About';
-import { Learn } from './pages/Learn';
+import Learn from './pages/Learn';
 
 import { UserProvider } from './UserContext.jsx';
 
