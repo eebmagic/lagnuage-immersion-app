@@ -1,12 +1,18 @@
-import './App.css'
-import { Routes, Route, Outlet, Link, useNavigate } from 'react-router-dom';
+import './App.css';
+import {
+  Routes,
+  Route,
+  Outlet,
+  Link,
+  useNavigate,
+} from 'react-router-dom';
 
 import { Menubar } from 'primereact/menubar';
 
-import { About } from './pages/About';
+import About from './pages/About';
 import Learn from './pages/Learn';
 
-import { UserProvider } from './UserContext.jsx';
+import { UserProvider } from './UserContext';
 
 function App() {
   return (
@@ -19,7 +25,7 @@ function App() {
         </Route>
       </Routes>
     </UserProvider>
-  )
+  );
 }
 
 function PrimaryLayout() {
@@ -29,25 +35,25 @@ function PrimaryLayout() {
     {
       label: 'Home',
       icon: 'pi pi-fw pi-home',
-      command: () => navigateTo('/')
+      command: () => navigateTo('/'),
     },
     {
       label: 'Learn',
       icon: 'pi pi-fw pi-book',
-      command: () => navigateTo('/learn')
+      command: () => navigateTo('/learn'),
     },
     {
       label: 'About',
       icon: 'pi pi-fw pi-info-circle',
-      command: () => navigateTo('/about')
-    }
+      command: () => navigateTo('/about'),
+    },
   ];
   return (
     <div className="flex flex-column gap-4">
       <Menubar model={items} />
       <Outlet />
     </div>
-  )
+  );
 }
 
 function Hello() {
@@ -57,7 +63,7 @@ function Hello() {
       <Link to="/learn">Learn</Link>
       <Link to="/about">About</Link>
     </div>
-  )
+  );
 }
 
 export default App;
