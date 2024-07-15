@@ -57,6 +57,7 @@ def get_best_vocab(n=20, num_parents=2):
         'snippets': good_snippets
     }
 
+# Updates the target structure with the src
 def update_matching_paths(src, target, path=None):
     if path is None:
         path = []
@@ -67,7 +68,8 @@ def update_matching_paths(src, target, path=None):
             if isinstance(value, dict) and isinstance(target[key], dict):
                 update_matching_paths(value, target[key], path=curr_path)
             else:
-                if type(value) == type(target[key]):
+                existing_type = type(target[key])
+                if isinstance(value, existing_type):
                     target[key] = value
         else:
             if isinstance(value, dict):
