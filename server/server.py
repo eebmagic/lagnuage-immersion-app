@@ -1,13 +1,14 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS, cross_origin
-import pymongo
 import random
 import json
-from bson import json_util
-from bson.objectid import ObjectId
 import time
 import heapq
 import math
+
+import pymongo
+from flask import Flask, request, jsonify
+from flask_cors import CORS, cross_origin
+from bson import json_util
+from bson.objectid import ObjectId
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
