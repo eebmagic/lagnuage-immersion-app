@@ -151,6 +151,8 @@ def get_user_doc(user_name=None, user_id=None):
             }), 400
     elif user_name:
         query = {'username': user_name}
+    else:
+        query = {}
 
     # Query for user doc
     try:
@@ -211,7 +213,14 @@ def update_user():
     update_matching_paths(data, user_doc)
 
     # Update the user document
-    result = USER_SETTINGS_COLLECTION.update_one({'_id': user_bson_id}, {'$set': user_doc}).raw_result
+    result = USER_SETTINGS_COLLECTION.update_one(
+        {
+            '_id': user_bson_id
+        },
+        {
+            '$set': user_doc
+        }
+    ).raw_result
 
     return jsonify({
         'result': result,
@@ -312,7 +321,7 @@ def log_vocab_learning():
 
     user_diffs = user_settings['repetition_constants']['curve_shapes']
 
-    print(f'found body data: {json.dumps(data, indent=2)}');
+    print(f'found body data: {json.dumps(data, indent=2)}')
     codes = set()
     update_statuses = []
     for v_id in data['vocab']:
@@ -369,7 +378,9 @@ def get_rep_items():
     rank_types = ['recent', 'average']
     rank_type = request.args.get('rank_type', 'recent')
     if rank_type not in rank_types:
-        return jsonify({'error': f'Invalid rank type. Must be one of: {rank_types} (defaults to recent)'}), 400
+        return jsonify({
+            'error': f'Invalid rank type. Must be one of: {rank_types} (defaults to recent)'
+        }), 400
 
     try:
         n = int(request.args.get('n', default_n))
