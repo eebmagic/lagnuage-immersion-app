@@ -291,8 +291,12 @@ def update_vocab_item(vocab_id, strength, review_time, user_diffs):
         # Update the doc
         result = VOCAB_COLLECTION.update_one({'id': vocab_id}, {'$set': {'rep_data': new_data}})
 
-        # return result.modified_count == 1
-        return 200
+        if result.modified_count == 1:
+            return jsonify({'success': True}), 200
+
+        return jsonify({
+            'error': f'Failed to update single vocab item ({result.modified_count})'
+        }), 500
     except Exception as e:
         print(f'Error updating vocab item: {vocab_id}')
         print(e)
